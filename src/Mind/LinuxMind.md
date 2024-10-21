@@ -204,7 +204,7 @@
   - 用户修改 usermod
   - 用户锁定  usermod -L 用户名
   - 用户解锁 usermod -U 用户名
-- 密码管理：
+ - 密码管理：
   - 修改密码 passwd
   - 账户的密码策略。chage
   - 批量修改密码。 chpasswd 命令
@@ -248,14 +248,14 @@
 - at
   - 一次性定时任务 at
     命令 at 从文件或标准输入中读取命令并在将来的一个时间执行，只执行一次。at 在正常执行时需要 atd 守护进程
-  - anacron
+- anacron
     如果 linux 服务器在关机时间之内有系统定时任务（cron）需要执行，那么这些     任务是不会执行的，anacron 工具会使用一天，七天，一个月作为检测周期来判断    有定时任务在关机之后没有执行，anacron 工具会在特定的时间内重新执行这些任  centos6 中 anacron工具不再是单独的服务，而变成了系统命令。
     anacron 文件 /var/spool/anacron/目录存在 /etc/cron.{dailyweekly      monthly} 保存 anacron 工具上次执行的时间，
     配置文件 /etc/anacrontab 文件
 		配置文件 /etc/anacrontab
 天数。 强制延迟（分）。 工作名称。  实际执行命令
 1   5   cron.daily.    nice run-parts /etc/cron.daily
-	- systemd.timer
+- systemd.timer
 
 ## Linux 文本三剑客
 
