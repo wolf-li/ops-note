@@ -1,10 +1,10 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-10-21 14:03:56
+ * @LastEditTime: 2024-10-21 15:53:36
  * @LastEditors: wolf-li
  * @Description: 
- * @FilePath: /note/src/ThinkMind.md
+ * @FilePath: /note/src/Mind/LinuxMind.md
  * talk is cheep show me your code.
 -->
 # Linux 系统管理
@@ -256,3 +256,151 @@
 天数。 强制延迟（分）。 工作名称。  实际执行命令
 1   5   cron.daily.    nice run-parts /etc/cron.daily
 	- systemd.timer
+
+## Linux 文本三剑客
+
+- 正则表达式
+  - 常规正则
+^ 尖角号，用于模式最左侧，匹配以 xx 开头
+$ dollar 符，结尾
+^$ 组合符，表示空格
+.  匹配任意一个字符，不匹配空行
+\\ 转义字符，特殊含义的字符显出原形
+\* 匹配前一个字符，
+.\* 组合匹配所有
+^.\* 组合符，匹配任意多个字符开头内容
+.*$ 匹配任意多个字符结尾的内容
+[abc] 匹配[] 集合内任意字符
+[^abc] 匹配除了 ^后面的字符
+  - 扩展正则
+- sed 文本替换
+  文本替换 sed 's/book/books/' file
+-n 选项或 -p 命令，打印发生替换的行。 sed -n 's/test/TEST/p' file
+文件内容替换  sed -i 's/book/books/g' file
+删除空白行  sed '/^$/d' filename
+删除文件的第二行  sed '2d' filename
+删除文件的第二行到末尾所有行 sed '2,$d' file
+删除文件最后一行  sed '$d' file
+删除文件中所有开头是 test 行  sed '/^test/d' file
+
+- grep  文本过滤
+	多级目录对文件递归检索。  grep "class" . -R -n
+忽略匹配样式中的字符大小写. grep -i "hello"
+匹配多个模式。 grep -e "class" -e "virtural"  file
+只在目录中所有的 .php 和 .html 文件中递归搜索字符 main() grep "main()" . -r. --include *.{php,html}
+在搜索结果中排出所有 README 文件。grep "main()"  . -r --exclude "README"
+
+- awk 格式化文本
+  - awk 语法
+awk 参数 模式 动作 文件/数据
+默认使用 空格 作为分隔符 多个空格视为一个分隔符
+$0 代表一整行
+$1  第一列
+$NF 最后一列，列数
+awk ‘{print $1,$2}’ file 
+自定义输出 外部是单引号，内部双引号
+显示指定行。awk 'NR==5' file
+  - awk 内置变量
+FS 输入字段分隔符默认空白符
+OFS 输出字段分隔符默认空白符
+RS 输入记录分隔符（输入换行符）
+ORS 输出记录分隔符
+NF 当前字段的个数
+NR 行号
+FNR 各文件分别计数的行号
+指定分隔符 awk -F":" '{print $1}' filename. awk -v FS=':' '{print $1}' filename
+
+## 软件管理
+
+- RPM 软件包管理工具， rpm 是 redhat linux 发行版用来转门管理 Linux 各项套件的程序，由于遵循 GPL 规则且功能强大
+  - 常用命令
+rpm -qa 列出所有安装过的包
+rpm -e 包名。 卸载软件包
+rpm -ivh 包名  安装 rpm 包
+  - yum 是 Fedora 和 Redhat 以及 SUSE 中基于 rpm 的包管理器工具，它可以使系统管理人员交互和自动化地管理 RPM 软件包，能够从指定的服务器自动下载 RPM 包并且安装，可以自动处理依赖性关系，并且一次性安装所有依赖的软件包
+    - 自动搜索最快镜像插件。yum instal yum-fastestmirror
+    - 安装 图形化窗口插件。yum install yumex
+    - 查看可能批量安装的列表。yum grouplist
+    - 安装
+      yum install
+      yum groupinstal group1  安装程序组
+    - 更新和升级
+      yum update。全部更新
+      yum update package1。更新指定包
+      yum check-update 检查可以更新的程序
+      yum upgrade package1。升级指定程序
+      yum groupdate group1。升级指定程序组
+    - 查找
+      yum info package1。显示安装包信息
+      yum list。显示所有安装的软件包
+      yum list package1。显示指定程序安装包情况
+      yum groupinfo group1。显示程序组 group1 信息
+      yum search string 根据关键字搜索软件包
+    - 删除程序
+      yum remove package 
+      yum groupremove group1。删除程序组 group1
+      yum deplist package1。 查看程序 package1 依赖情况
+    - 清除缓存
+      yum clean packages。 清除缓存目录下的软件包
+      yum clean headers。 清除缓存目录下的 headers
+      yum clean oldheaders。清除缓存目录下旧的 headers
+- apt 是 debin linux 发行版中的 deb包管理工具，所有基于 debin 的发行版都使用这个包管理系统
+  - 更新
+    apt-get update
+  - 安装
+    apt-get install packagename
+  - 卸载(保留配置文件)
+    apt-get remove packagename
+  - 卸载（删除配置文件）
+    apt-get -purge remove package
+  - 缓存清空
+    apt-get clean
+  - 更新所有安装的软件包
+   apt-get upgrade
+
+## 磁盘管理
+
+- 磁盘介绍
+  - 机械硬盘物理特性；
+盘片（Platters）：盘片是机械硬盘的核心部件
+扇区：最小的存储单位，主要有 512bytes 和 4k两种模式
+
+  - 分区
+		fdisk
+		parted 
+	文件系统格式化
+	swap 分区
+	buffer cache
+	RAID
+	LVM
+		LVM 逻辑卷管理器，基于内核的 device mapper 功能。相比于直接在创建分区表后使用分区，LVM 提供了更灵活的管理方式：
+* LVM 可以管理多个硬盘（物理卷）上的存储空间
+* LVM 中的逻辑卷可以跨多个物理卷，文件系统不需要关心物理卷的位置
+* LVM 的逻辑卷可以动态调整大小，而不需要移动分区的位置
+		基本概念：
+物理卷（pv） 通常是一块硬盘
+卷组（vg）由多个物理卷组成
+逻辑卷（lv）在卷组里分配的逻辑存储空间，称之为【逻辑】，可以跨多个物理卷，也不一定是连续的
+		Subtopic 3
+	备份
+	术语
+		文件系统：是一种用于磁盘上的数据结构，它提供了文件和目录的概念，以及对文件的读写、删除等操作。一个分区上只能有一个文件系统，但一个文件系统可以跨多个分区
+		分区：通过在磁盘上划分出互不重叠的区域，可以将磁盘的容量划分为多个小块，用于不同的用途
+
+## 进程管理
+	Subtopic 1
+
+## 网络管理
+
+
+## 安全
+	selinux （redhat 系列用）
+		工作模式：
+enforce： SElinux 根据安全策略，积极阻止有潜在风险的操作
+permission：仅记录会被阻止的操作，
+disable：selinux 禁用，日志也不记录
+	AppArmor （debin 系列用）
+
+## 词汇
+	DMI（Desktop Management Interface，桌面管理接口）是一种用于管理和跟踪计算机系统硬件信息的标准规范。
+	守护进程
