@@ -1,6 +1,12 @@
-
-
-
+<!--
+ * @Author: wolf-li
+ * @Date: 2024-10-20 20:02:02
+ * @LastEditTime: 2024-10-21 14:27:44
+ * @LastEditors: wolf-li
+ * @Description: 
+ * @FilePath: /note/src/Nginx/linux内核参数调优.md
+ * talk is cheep show me your code.
+-->
 内核设置
 
 Linux 操作系统修改内核参数有3种方式：

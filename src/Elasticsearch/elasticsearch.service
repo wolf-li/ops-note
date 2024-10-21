@@ -1,0 +1,22 @@
+/usr/lib/systemd/system/elasticsearch.service
+
+[Unit]
+Description=ElasticSearch
+Requires=network.service
+After=network.service
+
+[Service]
+User=es
+Group=es
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+Environment=JAVA_HOME=/data/jdk1.8.0_301
+ExecStart=/data/elasticsearch/bin/elasticsearch
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=mixed
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=42s
+
+[Install]
+WantedBy=multi-user.target
