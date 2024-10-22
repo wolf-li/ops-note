@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 09:31:06
- * @LastEditTime: 2024-10-21 15:41:10
+ * @LastEditTime: 2024-10-22 10:48:01
  * @LastEditors: wolf-li
  * @Description: 
  * @FilePath: /note/src/SUMMARY.md
@@ -171,4 +171,4 @@
   - [soar](SQL/SQL/soar.md)
 
 # 思维导图
-- [Linux](./linux.html)
+- [Linux](./Mind/LinuxMind.html)
