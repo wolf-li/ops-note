@@ -1,9 +1,9 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-10-22 17:41:16
+ * @LastEditTime: 2024-10-23 17:26:02
  * @LastEditors: wolf-li
- * @Description: 
+ * @Description:
  * @FilePath: /note/src/Mind/LinuxMind.md
  * talk is cheep show me your code.
 -->
@@ -33,8 +33,78 @@
     - 历史命令 history
     - 命令查找
       - 查找命令的绝对路径 which
-      - 查找命令的程序、源代码等相关文件 whereis 
-  
+      - 查找命令的程序、源代码等相关文件 whereis
+
+## 引导程序
+
+- 引导（“启动计算机”的标准说法，bootstrapping 一词的缩写，使用这个词是计算机必须自己动起来）
+- 引导过程
+  - 加电
+  - 从 NVRAM 中装载 BIOS/UEFI
+  - 探测硬件
+  - 选择引导设备（磁盘、网络...）
+  - 识别 EFI 系统分区
+  - 载入引导装载程序 GRUB
+  - 确定引导那个内核
+  - 装载内核
+  - 实例化内核数据结构
+  - 启动 init/systemd(PID为1)
+  - 执行启动脚本
+  - 运行系统
+- 系统固件：机器加电后，CPU会执行存储在 ROM 中的引导代码。在虚拟系统中，这个 ROM 未必真实存在，但概念还是一样的。
+  - 系统固件通常知晓主板上安装的所有设备，比如 STAT控制器，网络接口卡，USB控制器以及电源和温度传感器。
+    对于物理硬件（相对于虚拟硬件），多数固件都提供了用户界面。不过这个界面一般都比较粗糙，而且不太容易访问到
+    需要在系统加电后迅速按下特定的按键。具体看厂商（control 、F6、F8）。在正常的引导过程中，系统固件会侦测硬件和
+    磁盘，执行一些简单的健康检查，然后查找下一阶段的引导代码。你可以使用固件的用户界面指定引导设备，一般都是通过设置
+    优先级来实现的。
+  - 传统 BIOS
+    - 传统 BIOS 认为引导设备是以主引导记录（MBR）为起始。MBR包括第一阶段的引导装载程序（也叫做“引导块”）和一个原始的磁盘分区表。可供引导程序装载程序
+      使用的空间非常有限（也叫做“引导块”）和一个原始的磁盘分区表。可用引导程序使用的空间非常有限（不足 512字节）所以除了载入运行第二阶段的引导装载程序
+      之外，不能进行其他操作。
+    - 引导块和 BIOS 都没有复杂到能够读取任意类型的标准文件系统，所以第二阶段的引导装载程序必须放在一个容易找到的地方。在典型的场景中，引导块从 MBR 中
+      读取分区信息，识别出标注为“活动”的磁盘分区。然后读取并执行位于该分区起始位置上的第二阶段引导装载程序。分区上的这个区域也被成为卷引导记录。
+  - UEFI（Unified Extensible Firmware Interface 统一可扩展固件接口）
+    - UEFI 规范中包含了一个叫做 GUID 分区表（GUID Partition Table，GPT）的现代磁盘存储方案。UEFI能够理解文件分配表（FAT）文件系统，这种源自 MS-DOS
+      的文件系统即简单又有效。这些特性结合在一起形成了一个新的概念：EFI系统分区。在引导期间固件会通过查询 GPT 来识别 ESP，然后从 ESP中的文件直接读取并执行
+      配置好的目标应用程序。ESP只是一个普通的 FAT 文件系统，它可以有任何操作系统挂载、读取、写入以及维护。磁盘上不再需要有任何隐匿的引导块。
+    - 显示引导选项的汇总信息 efibootmgr -v
+    - 尝试从系统硬盘引导，然后在尝试网络，同时忽略其他引导选项，可以使用 sudo efibootmgr -o 0004，0002 （0004， 0002 从上一个命令的结果获取的 bootOrder）
+- 引导装载程序:主要任务是识别并载入相应的操作系统内核。大多数引导装载程序会在引导期间提供一个界面，让用户在多个内核或操作系统中选择
+  - GRUB（GRand Unified Boot loader， GNU开发是大多数 linux 发行版默认的引导装载程序）
+    - GRUB 有两个分支：传统的 GRUB（GRUB Legacy），另一个全新的版本叫做 GRUB2
+    - GRUB的配置文件叫做 grub.cfg 通常位于 /boot/grub（redhat 为 /boot/grub2）
+    - 不要手动修改 grub.cfg 文件，通常都是利用工具 grub-mkconfig 生成。实际上大多数发行版都会在内核升级之后自动重新生成 grub.cfg，可以修改模版文件 /etc/default/grub
+      - /etc/default/grub 配置参数，修改后运行 update-grub 或 grub2-mkconfig
+        GRUB_BACKGROUND 背景图片
+        GRUB_COMMANDLINE_LINUX 添加到菜单表项中的 Linux 参数
+        GRUB_DEFAULT 默认菜单项的编号或标题
+        GRUB_DISABLE_RECOVERY 不生成恢复模式的菜单选项
+        GRUB_PRELOAD_MODULES 需要尽早装载 GRUB 模块列表
+  - FreeBSD引导过程（了解）
+- 系统管理守护进程
+  - 一旦内核被加载并完成了初始化过程，它就会在用户空间创建“自发”进程。称为字符进程的原因在于是由内核自主启动的，而在正常情况下，仅在现有进程出发请求时才会创建新进程
+  - init 首要任务是确保系统在任何时刻都运行着正确的服务和守护进程，init 定义了系统操作模式的概念：
+    - 单用户模式：该模式中只挂载少数量的文件系统，不运行任何服务，在控制台中启动 root shell
+    - 多用户模式：在该模式中挂载所有定制的文件系统，启动所有配置好的网络服务以及窗口系统和控制台的图形化登录管理器
+    - 服务器模式：类似于多用户模式，除了不启动图形化用户界面。
+    - 从引导到进入多用户模式的过程中，init 通常有一堆活要做：设置计算机名、设置时区、使用 fsck 检查磁盘、挂载文件系统等
+  - init 实现
+    - SysV init：系统模式叫做“运行级”。大数据运行级都使用单个字母或数组表示
+      - 问题：init 自身并没有强大到满足处理现代操作系统的需求。init 的大部分系统实际上都有一套标准化的、固定不变的 init 配置。该配置指向另一层 shell 脚本
+        由其负责改变运行级、修改配置。而第二层脚本中又包括第三层针对特定守护进程和系统的脚本，这些脚本交叉连接到特定的运行级的目录，目录中明确了需要在某些运行级
+        下运行的服务。init 缺少一个能够描述服务之间依赖关系的通用模型，因而所有的启动脚本和卸载脚本只能以串行方式运行，有系统管理员负责维护。后面的操作系统必须
+        等到之前的操作全部结束后才能执行，所以根本无法实现并行操作，系统需要花费大量的时间用来改变状态。
+    - systemd（现在主流）：吸收了之前通过胶带、脚本、管理员实现的 init 特性，正式形成了一套有关如何配置、访问、管理服务的统一理论
+- 关机
+  - halt 命令会执行关闭系统所有必须的操作，该命令会将关机事件写入日志中、杀死不必要的进程，将已缓存的文件系统块写会磁盘，然后挂起内核。在大多数系统中 halt -p 会最后切断系统电源
+  - reboot 基本上和 halt 一样，只不过它做的是重新引导。
+  - shutdown 命令建立在 halt 和 reboot 之上，它能够实现定时关机以及想登陆用户发送警告
+  - 云主机关机要注意有的云厂商 stop 和 reboot 操作和你想的不一样，需要查看文档。
+- 系统无法引导的应对策略
+  - 不调试，将系统恢复到已知的良好状态（利用快照，重新挂载磁盘）
+  - 是系统足以运行一个 shell，然后进行交互式调试
+  - 引导另一系统镜像，挂载故障系统的文件系统并以此开展检查
+
 ## 文件管理
 
 - 概念
@@ -85,7 +155,7 @@
 - 文件属性
   - 文件权限位（ rwx rwx rwx ）
     文件类型  所属用户权限 所属组权限 其他用户权限
-    数字表示 r-4 w-2 x-1  - 0 
+    数字表示 r-4 w-2 x-1  - 0
     \- 没有权限
     s 特殊功能
   - setuid、setgid
@@ -114,7 +184,7 @@
       - POSIX版 20世纪90年代中期制定的规范（getfacl， setfack）
       - NFSv4 ACL 适配 linux 与 windows
 - 文件元数据
-  - indoe 
+  - indoe
     inode是“index node”的缩写，中文译名为索引节点或i节点。它是个数据结构，用于跟踪Linux或基于UNIX的文件系统中的所有文件和录。每个文件或目录在文件系统中都会被分配一个唯一的inode号码，且该inode号码在文件的整个生命周期内都是不变的。
   - 作用 存储文件的元数据信息：inode记录了文件的许多重要属性，如件的大小、拥有者、权限、创建时间、修改时间和访问时间等，以及文件链接数和磁盘块的指针等。这些元数据使得文件系统能够快速地检索和管文件。
   - 提供文件系统的性能优化：由于inode中记录了文件的元数据信息，系可以通过读取inode来获取文件的属性，而无需读取整个文件。这样可以著提高文件系统的性能，特别是对于大量小文件的读取和管理。
@@ -124,7 +194,7 @@
     - inode耗尽问题：如果文件系统中的inode数量耗尽，即使磁盘上还可用的存储空间，也无法再创建新的文件或目录。因为每个新文件或目都需要一个唯一的inode来标识。
     - inode数量监控：定期检查inode使用情况非常重要，以确保其不会到配置的限制。可以使用上述的df -i命令来监控inode的使用情况。
   - 命令
-    - 查看 inode 
+    - 查看 inode
       ls -i
       stat 文件名
   - 检查 inode 使用情况
@@ -153,7 +223,7 @@
     - echo "" > file1
   - 文件创建连接
     - 软连接 ln -s
-    - 硬连接 ln 
+    - 硬连接 ln
   - 文件复制
     - cp
     - rsync
@@ -167,7 +237,7 @@
     - 分屏查看  more  less
     - 部分查看。head  tail
   - 文本统计
-    - wc 
+    - wc
   - 文件编辑
     - 命令
       - vi/vim
@@ -202,7 +272,7 @@
       - 查看文件acl getfacl
       - setfacl
   - 压缩解压缩
-    - tar  
+    - tar
       - tar -zcvf 压缩文件名 .tar.gz 被压缩文件名
       - tar -zxvf 压缩文件名.tar.gz
     - zip
@@ -223,7 +293,7 @@
   - 用户修改 usermod
   - 用户锁定  usermod -L 用户名
   - 用户解锁 usermod -U 用户名
- - 密码管理：
+- 密码管理：
   - 修改密码 passwd
   - 账户的密码策略。chage
   - 批量修改密码。 chpasswd 命令
@@ -257,7 +327,6 @@
   - LDAP
 - SSO（应用程序级别的单一登陆系统）
 
-
 ## 定时任务
 
 - crontab
@@ -275,7 +344,7 @@
   /etc/cron.d/ 这个文件夹下的配置同。/etc/crontab
   /var/spool/cron/ 存放每个用户的 crontab 所有权是特定的用户
   - crontab 文件。/etc/crontab
-  格式 *  *  * * *
+  格式 \*  \*  \*  \*  \*
   取值范围。0-59 分钟
   取值范围。0-23 小时
   取值范围。 1-31 几号
@@ -288,7 +357,7 @@
     如果 linux 服务器在关机时间之内有系统定时任务（cron）需要执行，那么这些     任务是不会执行的，anacron 工具会使用一天，七天，一个月作为检测周期来判断    有定时任务在关机之后没有执行，anacron 工具会在特定的时间内重新执行这些任  centos6 中 anacron工具不再是单独的服务，而变成了系统命令。
     anacron 文件 /var/spool/anacron/目录存在 /etc/cron.{dailyweekly      monthly} 保存 anacron 工具上次执行的时间，
     配置文件 /etc/anacrontab 文件
-		配置文件 /etc/anacrontab
+    配置文件 /etc/anacrontab
 天数。 强制延迟（分）。 工作名称。  实际执行命令
 1   5   cron.daily.    nice run-parts /etc/cron.daily
 - systemd.timer
@@ -320,7 +389,7 @@ $ dollar 符，结尾
 删除文件中所有开头是 test 行  sed '/^test/d' file
 
 - grep  文本过滤
-	多级目录对文件递归检索。  grep "class" . -R -n
+多级目录对文件递归检索。  grep "class" . -R -n
 忽略匹配样式中的字符大小写. grep -i "hello"
 匹配多个模式。 grep -e "class" -e "virtural"  file
 只在目录中所有的 .php 和 .html 文件中递归搜索字符 main() grep "main()" . -r. --include *.{php,html}
@@ -348,39 +417,75 @@ FNR 各文件分别计数的行号
 
 ## 软件管理
 
+- 打包系统（packaging system）：简化了软件管理工作。软件包内运行软件所有需要的全部文件，包括预编译好的二进制，依赖信息，可由管理员定制的模版等
 - RPM 软件包管理工具， rpm 是 redhat linux 发行版用来转门管理 Linux 各项套件的程序，由于遵循 GPL 规则且功能强大
   - 常用命令
-rpm -qa 列出所有安装过的包
-rpm -e 包名。 卸载软件包
-rpm -ivh 包名  安装 rpm 包
-  - yum 是 Fedora 和 Redhat 以及 SUSE 中基于 rpm 的包管理器工具，它可以使系统管理人员交互和自动化地管理 RPM 软件包，能够从指定的服务器自动下载 RPM 包并且安装，可以自动处理依赖性关系，并且一次性安装所有依赖的软件包
-    - 自动搜索最快镜像插件。yum instal yum-fastestmirror
-    - 安装 图形化窗口插件。yum install yumex
-    - 查看可能批量安装的列表。yum grouplist
-    - 安装
-      yum install
-      yum groupinstal group1  安装程序组
-    - 更新和升级
-      yum update。全部更新
-      yum update package1。更新指定包
-      yum check-update 检查可以更新的程序
-      yum upgrade package1。升级指定程序
-      yum groupdate group1。升级指定程序组
-    - 查找
-      yum info package1。显示安装包信息
-      yum list。显示所有安装的软件包
-      yum list package1。显示指定程序安装包情况
-      yum groupinfo group1。显示程序组 group1 信息
-      yum search string 根据关键字搜索软件包
-    - 删除程序
-      yum remove package 
-      yum groupremove group1。删除程序组 group1
-      yum deplist package1。 查看程序 package1 依赖情况
-    - 清除缓存
-      yum clean packages。 清除缓存目录下的软件包
-      yum clean headers。 清除缓存目录下的 headers
-      yum clean oldheaders。清除缓存目录下旧的 headers
+    rpm -qa 列出所有安装过的包
+    rpm -e 包名。 卸载软件包
+    rpm -ivh 包名  安装 rpm 包
+    rpm -q --whatrequires \<packageName> 查看某个软件包的依赖
+    rpm -U \<packageName> 更新某个软件包
+- yum 是 Fedora 和 Redhat 以及 SUSE 中基于 rpm 的包管理器工具，它可以使系统管理人员交互和自动化地管理 RPM 软件包，能够从指定的服务器自动下载 RPM 包并且安装，可以自动处理依赖性关系，并且一次性安装所有依赖的软件包
+  - 仓库配置文件 /etc/yum.repos.d/
+  - 自动搜索最快镜像插件。yum instal yum-fastestmirror
+  - 安装 图形化窗口插件。yum install yumex
+  - 查看可能批量安装的列表。yum grouplist
+  - 安装
+    yum install
+    yum groupinstal group1  安装程序组
+  - 更新和升级
+    yum update。全部更新
+    yum update package1。更新指定包
+    yum check-update 检查可以更新的程序
+    yum upgrade package1。升级指定程序
+    yum groupdate group1。升级指定程序组
+  - 查找
+    yum info package1。显示安装包信息
+    yum list。显示所有安装的软件包
+    yum list package1。显示指定程序安装包情况
+    yum groupinfo group1。显示程序组 group1 信息
+    yum search string 根据关键字搜索软件包
+  - 删除程序
+    yum remove package
+    yum groupremove group1。删除程序组 group1
+    yum deplist package1。 查看程序 package1 依赖情况
+  - 清除缓存
+    yum clean packages。 清除缓存目录下的软件包
+    yum clean headers。 清除缓存目录下的 headers
+    yum clean oldheaders。清除缓存目录下旧的 headers
+  - 自定义软件源（dnf/yum都可以）
+    - 适用场景
+      - 当收集的软件越来越多时，有必要将这些软件汇总并创建自己的软件源
+      - 离线部署
+    - 操作步骤
+      - 安装 createrepo
+      - 所有的软件包保存到某个目录 比如：/soft
+      - 运行 createrepo /soft 自动给 /soft 中的软件生成配套的数据库信息
+- dnf 新一代的 Yum v4，采用了 DNF 架构，DNF在性能和资源占用上都比老版本的 yum 有了很多优化，为了和旧版本兼容，新版操作系统依然可以使用 yum 命令
+  - 常用命令
+    - 查看当前系统已经配置的软件源
+      dnf repolist
+    - 查看软件源的详细信息
+      dnf repolist -v
+      dnf repoinfo
+    - 清空缓存
+      dnf clean all
+    - 软件包安装
+      dnf install -y \<packageName>
+    - 软件源更新
+      dnf update
+    - 卸载软件包
+      dnf remove \<packageName>
+    - 搜索软件包
+      dnf search \<packageName>
+    - 查看 dnf 安装和卸载历史
+      dnf history
+    - 下载软件包到当前目录
+      dnf download \<packageName>
+    - 查看那个软件包可以提供 xx 命令
+      dnf provides xx
 - apt 是 debin linux 发行版中的 deb包管理工具，所有基于 debin 的发行版都使用这个包管理系统
+  - 仓库配置文件 /etc/apt/sources.list
   - 更新
     apt-get update
   - 安装
@@ -393,6 +498,17 @@ rpm -ivh 包名  安装 rpm 包
     apt-get clean
   - 更新所有安装的软件包
    apt-get upgrade
+- dpkg 管理 .deb 包
+  - 查看某个软件是否安装
+    dpkg -l \<packagename>
+  - 安装某个软件包
+    dpkg --install \<packagename>
+- 常见问题
+  - 软件包依赖问题：使用 rpm 安装时，如果系统提示某个软件包依赖其他软件包，但该系统没有这个依赖，可以使用 --nodeps 选项忽略依赖关系
+  - RPM 数据库损坏：rpm 软件包到相关数据库存放在 /var/lib/rpm 目录中，如果数据库出现损坏，可以使用 rpm --rebuilddb 修复数据库资料
+  - 软件安装的时间问题：软件安装时系统提示，“warning： clock skew detected”说明系统时间严重出错，可以通过 date -s "2023-01-12 14:00" 修改系统时间
+  - DNF 繁忙的问题：可能有其他人使用，或者安装卡死。找到进程杀死dnf 相关进程即可。
+  - GCC 编译器问题：依赖问题，当前操作系统内没有 gcc ，需要手动安装。
 
 ## 磁盘管理
 
@@ -435,7 +551,7 @@ rpm -ivh 包名  安装 rpm 包
 - 格式化
   - 将硬盘格式化为 ext4 类型 mkfs.ext4 /dev/sdc1
   - 交换分区格式化 mkswap /dev/sdc3
-- 挂载文件系统
+- 挂载文件系统 (文件系统：一种用于磁盘上的数据结构，提供了文件和目录的概念，以及对文件读写、删除等操作，一个分区上只能有一个文件系统，一个文件系统可以有多个分区)
   - 手动挂载文件系统（临时方案）
     - mount /dev/sdc1 /data1 #挂载 /dev/sdc1 到 /data1
     - umount /dev/sdc1 # 取消挂载
@@ -443,7 +559,8 @@ rpm -ivh 包名  安装 rpm 包
     - /etc/fstab 系统配置文件
       - 文件内容：设备名/设备标签  挂载目录名称  文件系统类型  挂载属性  文件系统是否使用 dump 备份（0不备份 1每天备份）  文件系统在开机后使用 fsck 程序进行硬盘检测程序（1 表示最先检测， 2 表示第二个检测 0 表示不需要检测）
 - swap 分区
-  - 
+  - swap space 是磁盘上的一块区域，可以是一个分区，也可以是一个文件，或者组合方式出现，当系统物理内存吃紧时，Linux 会讲内存中不常访问的数据放入 swap 上，这样系统有更多物理内存为其他进程服务，而当系统要访问 swap 上存储的内容时，系统会将 swap 上的数据加载到内存中。
+  -
 - buffer cache
 - RAID 独立冗余硬盘阵列
   - 原理：多块硬盘按照不同的方式组成成为一块逻辑硬盘
@@ -451,13 +568,14 @@ rpm -ivh 包名  安装 rpm 包
     - 硬 RAID（有独立的控制芯片或控制卡，不需要消耗 CPU 内存等资源）
     - 软 RAID （mdadm 命令 Rocky linux9 目前支持的 RAID 0，1，4，5，6，10）
   - RAID 级别
-    - RAID 0
-    - RAID 1
-    - RAID 4 
-    - RAID 5
-    - RAID 10
-  - RAID 性能测试
-    - 写入模拟 time dd if=/dev/zero of=/txt bs=1M count=1000
+    - RAID 0 也成条带化，将数据分块存储在多个硬盘上，可以充分利用所有容量，获得叠加的顺序读写性能（但随机读写一般），没有冗余，任何一块磁盘损坏都会导致整个阵列数据丢失，适合需要高性能但不需要数据安全的场景
+    - RAID 1 也称镜像，将数据完全复制到多个盘上，提供了绝对冗余，整个阵列中只要有一块磁盘存储数据久不会丢失。空间利用率低，适合需要高可靠的场景，同时由于每块盘上的数据完全一致，RAID 1 的读取性能可以叠加，但写入性能不会提升
+    - RAID 4
+    - RAID 5 将数据和一份校验信息存储在多个盘上，可以允许阵列中一块磁盘损坏，重建期间性能会严重下降。
+    - RAID 10 = RAID 1 + RAID 0
+  - RAID 性能测试(dd 只能测试顺序写，无法测随机读写，dd 使用非常低的 I/O 队列深度无法重复测试设备的并发尤其是固态，dd 命令使用的特殊设备 /dev/urandom/dev/random本身性能有限，对磁盘进行更全面的性能测试需要使用 fio)
+    - 写入测试  dd if=/dev/zero of=test.img bs=1M count=1000 oflag=direct
+    - 读取测试  dd if=/dev/sda1 of=/dev/null bs=1M count=1000 iflag=direct
 - LVM（动态管理存储）
   LVM 逻辑卷管理器，基于内核的 device mapper 功能。相比于直接在创建分区表后使用分区，LVM 提供了更灵活的管理方式：
   \* LVM 可以管理多个硬盘（物理卷）上的存储空间
@@ -497,10 +615,10 @@ rpm -ivh 包名  安装 rpm 包
       - 删除逻辑卷 lvremove /dev/test_vg/test_data
       - 删除卷组 vgremove test_vg
       - 删除物理卷 pvremove /dev/sdc{2,3}
-	备份
-	术语
-		文件系统：是一种用于磁盘上的数据结构，它提供了文件和目录的概念，以及对文件的读写、删除等操作。一个分区上只能有一个文件系统，但一个文件系统可以跨多个分区
-		分区：通过在磁盘上划分出互不重叠的区域，可以将磁盘的容量划分为多个小块，用于不同的用途
+
+## 备份
+
+
 
 ## 进程管理
 
@@ -560,7 +678,7 @@ rpm -ivh 包名  安装 rpm 包
     - 自定义格式： ps -eo pid，args，psr
   - 显示进程树 pstree
   - 显示进程数量 pstree -p
-  - 根据进程名字查看信息 pgrep 
+  - 根据进程名字查看信息 pgrep
   - 发送信号到指定进程 kill
     - 常用信号
       - 1 挂起，终端掉线或者退出
@@ -582,36 +700,56 @@ rpm -ivh 包名  安装 rpm 包
       -d num 设置时间间隔
       -u username 指定用户名
       -p pid 指定进程
-      -n num 循环显示次数 
+      -n num 循环显示次数
+      -c 显示进程完整路径
     - 交互式命令
       z：打开，关闭颜⾊
-      Z: 全局显示颜⾊修改 
-      h：显示帮助画⾯，给出⼀些简短的命令总结说明； 
-      k：终⽌⼀个进程； 
-      i：忽略闲置和僵死进程，这是⼀个开关式命令； 
-      q：退出程序； 
-      r：重新安排⼀个进程的优先级别； 
-      S：切换到累计模式； 
+      Z: 全局显示颜⾊修改
+      h：显示帮助画⾯，给出⼀些简短的命令总结说明；
+      k：终⽌⼀个进程；
+      i：忽略闲置和僵死进程，这是⼀个开关式命令；
+      q：退出程序；
+      r：重新安排⼀个进程的优先级别；
+      S：切换到累计模式；
       s：改变两次刷新之间的延迟时间（单位为s），如果有⼩数，就换算成ms。输⼊ f或者
-      F：从当前显示中添加或者删除项⽬； 
-      o或者O：改变显示项⽬的顺序； 
-      l：切换显示平均负载和启动时间信息； 
-      m：切换显示内存信息； 
-      t：切换显示进程和CPU状态信息； 
-      c：切换显示命令名称和完整命令⾏； 
-      M：根据驻留内存⼤⼩进⾏排序； 
-      P：根据CPU使⽤百分⽐⼤⼩进⾏排序； 
-      T：根据时间/累计时间进⾏排序； 
-      w：将当前设置写⼊~/.toprc⽂件中。 
-      B：全局字体加粗 数字1：⽤于多核监控CPU，监控每个逻辑CPU的情况 
+      F：从当前显示中添加或者删除项⽬；
+      o或者O：改变显示项⽬的顺序；
+      l：切换显示平均负载和启动时间信息；
+      m：切换显示内存信息；
+      t：切换显示进程和CPU状态信息；
+      c：切换显示命令名称和完整命令⾏；
+      M：根据驻留内存⼤⼩进⾏排序；
+      P：根据CPU使⽤百分⽐⼤⼩进⾏排序；
+      T：根据时间/累计时间进⾏排序；
+      w：将当前设置写⼊~/.toprc⽂件中。
+      B：全局字体加粗 数字1：⽤于多核监控CPU，监控每个逻辑CPU的情况
       b：打开，关闭加粗 x，⾼亮的形式排序对应的列
       < > ：移动选择排序的列
     - 显示进程信息
-      - 第一行系统信息：
-        
-  - 后台运行 nohup
-  - bg
-  - fg
+      - 第一行信息：
+        top - 09:03:03 up 11:38,  2 users,  load average: 0.00, 0.00, 0.00
+              时间        运行时间  登陆用户    系统负载，任务队列的平均长度
+      - 第二行信息：
+        Tasks: 204 total,   1 running, 203 sleeping,   0 stopped,   0 zombie
+              总进程数       正在运行的       休眠的          停止的       僵尸进程数
+      - 第三行信息：
+        %Cpu(s):  0.2 us,  0.2 sy,  0.0 ni, 99.7 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+              用户空间占用  内核空间占用  nice值  空闲 CPU  等待输入输出  
+      - 第四行信息
+        MiB Mem :   3911.4 total,   2664.4 free,    248.9 used,    998.1 buff/cache
+                   物理内存使用          空闲          已使用        buffer/cache 使用
+      - 第五行信息
+        MiB Swap:      0.0 total,      0.0 free,      0.0 used.   3470.9 avail Mem
+                      swap 总大小       swap 剩余      swap 使用的   swap 可用
+      - 动态进程字段
+         PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+         进程id  用户   优先级 nice 虚拟内存  进程使用未被  共享内存 进程状态 cpu使用率 内存使用率  启动时间 执行命令
+  - 后台运行 nohup （运行程序的信息不输出到终端，输出内容会写入当前目录的 nohup.out）
+    - nohup \<command> & 命令执行放入后台
+    - nohup \<command> > nhup.out 不显示执行结果，重定向
+  - bg 将作业放到后台运行
+  - fg jobid 将后台作业放到前台展示
+  - job 显示当前终端后台运行程序
   - init （ /etc/inittab 根据这个配置文件创建 Linux 进程 ）系统初始化工具，是所有 linux 进程的父进程，进程 ID 是1
     - 0 停机
     - 1 单用户模式
@@ -668,20 +806,20 @@ rpm -ivh 包名  安装 rpm 包
       - 配置静态路由 nmcli connection modify ens160 ipv4.routes "172.16.8.0/24 172.16.8.1, 172.16.9.0/24 172.16.9.1"
       - 激活网卡 nmcli connection down ens160 && nmcli connection up ens160 up
     - 修改系统配置文件参数 Rocky9 /etc/NetworkManager/system-connections/ 目录中
-    - netstat 显示网络连接、接口状态、伪连接、网络链路信息和组播成员
-      - 显示当前路由表 netstat -rn
-      - 显示网络接口情况 netstat -i
-    - ss （iproute包）CentOS7 替代 netstat 命令，用于查看网络连接状态，
-      - 显示所有 socket 连接 ss -an
-      - 格式化输出 ss -an ｜ column -t
-      - 显示正在监听的 TCP 和 UDP 连接 ss -tupnl ｜ column -t
-      - 统计服务器连接数 ss -s
-    - telnet 远程登录，一般用来测试 TCP 接口
-    - wget 
-    - curl
-    - nslookup 域名查询（bind-utils）
-      - nslookup www.baidu.com
-    - nmap 嗅探命令（一般不要使用，企业内部有探测）
+- netstat 显示网络连接、接口状态、伪接、网络链路信息和组播成员
+  - 显示当前路由表 netstat -rn
+  - 显示网络接口情况 netstat -i
+- ss （iproute包）CentOS7 替代netstat 命令，用于查看网络连接状态，
+  - 显示所有 socket 连接 ss -an
+  - 格式化输出 ss -an ｜ column -t
+  - 显示正在监听的 TCP 和 UDP 连接 ss-tupnl ｜ column -t
+  - 统计服务器连接数 ss -s
+- telnet 远程登录，一般用来测试 TCP 口
+- wget
+- curl
+- nslookup 域名查询（bind-utils）
+  - nslookup www\.baidu\.com
+- nmap 嗅探命令（一般不要使用，企业内部有探测）
 - 网络排障
   - 原则：
     - 一次只修改一个地方，每次改动都要测试，如果没有达到预期，恢复操作
@@ -708,13 +846,105 @@ rpm -ivh 包名  安装 rpm 包
   - iperf
 - 双网卡绑定
 
+## BASH
+
+- SHELL ：用户和内核对话界面。该环境只有一个命令提示符，让用户输从键盘入指令，也称为命令行环境（CLI command line interface）
+- SHELL种类
+  - sh
+  - csh
+  - Bourne Again shell（bash）
+  - Z Shell（zsh）macos 默认
+  - 查看当前默认的 SHELL echo $SHELL
+  - 查看当前系统安装的所有 SHELL cat /etc/shells
+  - 找到 某个 SHELL 可执行文件位置 which fish
+  - 修改默认 SHELL chsh -s /usr/bin/fish
+
 ## 安全
 
 - 防火墙
   - firewalld
-  - iptables
+  - iptable
+    linux 上应用程序，用于管理 Netfilter 。Netfilter 是 Linux 内核空间的程序代码，在 Linux 内核中实现了防火墙
+    - 使用条件
+      sudo 用户权限
+      拥有终端
+    - Netfilter 数据包传输内置三个过滤器链
+      - INPUT
+      - OUTPUT
+      - FORWARD
+    - iptable 组成（五链四表）
+      - tables 表是将类似规则分组的文件。一个表格由几个规则链组成。
+        四个默认表管理不同的 rule chains
+        - Filter
+          默认数据包过滤表。它充当门禁，决定哪些数据包进入和离开网络。
+        - NAT
+          包含将数据包路由到远程网络的NAT规则。它用于需要更改的数据包。
+        - Mangle
+            调整IP数据包内容
+        - RAW
+      - chains 链条是一串规则。当收到数据包时，iptables会找到适当的表，并通过规则链进行过滤，直到找到匹配项。
+        - INPUT
+          处理目的地为本地应用程序或服务的传入数据包。
+        - OUTPUT
+          管理本地应用程序或服务上生成的传出数据包。
+        - FORWARD
+          适用于通过系统从一个网络接口到另一个网络接口的数据包。
+        - PREROUTING
+          在路由之前更改数据包。更改发生在路由决定之前。
+        - POSTROUTING
+          路由后更改数据包。更改发生在路由决定之后。
+    	tables 对应的 chains
+    rules 规则
+    	定义匹配数据包的条件，捕获数据包后发送到 targets
+    targets 目标
+    	对数据包采取的动作（接收、丢弃、驳回）
+        ACCEPT
+        	允许数据包通过防火墙
+        DROP
+        	在通知发送者的情况下丢弃数据包
+        REJECT
+        	通知发送者错误下丢弃数据包
+        LOG
+        	记录数据包信息到日志文件中
+        SNAT
+        	源地址转换
+        DNAT
+        	目标地址转换
+        MASQUERADE
+        	为动态分配的IP更改数据包的源地址。
+	安装
+    deb 包管理
+    	apt install iptables
+    	apt install iptables-persistent
+    	systemctl enable netfilter-persistent
+    rpm 包管理
+    	yum install iptables
+    	yum install iptables-services
+    	systemctl enable iptables
+	常用命令
+    查看规则
+iptables -L
+    允许换回地址通信
+iptables -A INPUT -i lo -j ACCEPT
+    允许访问 http 服务
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+    允许某个 IP 访问
+iptables -A INPUT -s [IP-address] -j ACCEPT
+    记录
+iptables -A INPUT -j LOG --log-prefix "Dropped: "
+    删除某个规则
+iptables -L --line-numbers
+    移除所有规则
+iptables -F
+    保存配置
+    	deb
+netfilter-persistent save
+    	rpm
+service iptables save
+	参考链接
+    https://phoenixnap.com/kb/iptables-linux
 - selinux （redhat 系列用）
-		工作模式：
+    工作模式：
 enforce： SElinux 根据安全策略，积极阻止有潜在风险的操作
 permission：仅记录会被阻止的操作，
 disable：selinux 禁用，日志也不记录
@@ -723,17 +953,108 @@ disable：selinux 禁用，日志也不记录
 - WireGuard
 
 ## 日志
+
 - 日志管理
   - 从各种源头收集日志
   - 为消息的查询、分析、过滤、监视提供结构化接口
   - 管理消息的保留和日期，以便消息在发挥作用或合法期间可以尽可能久地保留，遵循相关规范。
+- 常见日志
+  - apache2/*  Apache httpd 的日志
+  - /var/log/apt*  APT 软件包安装日志
+  - /var/log/auth.log sudo 授权日志
+  - /var/log/boot.log 系统启动脚本输出
+  - /var/log/cloud-init.log cloud-init 初始化脚本
+  - /var/log/cron,cron/log  cron的执行情况和出现的错误
+  - /var/log/daemon.log 所有的守护进程信息
+  - /var/log/debug* 
 - systemd journal
 - syslog
 
 ## 驱动程序和内核
 
+- 内核相关的日常事务
+- 设备及驱动程序
+- Linux 内核配置
+- 可装载内核模块
+- 在云中引导其他内核
+- 内核错误
 
 ## 打印
+
+- 打印功能依赖于以下几部分
+  - 一个负责收集和调度作业的打印“假脱机程序” spool。
+  - 能够与假脱机程序交互的用户层面的实用工具（命令行或GUI）这些工具能够将打印作业发送给假脱机程序、查询作业状态（挂起完成）、删除或重新调度作业
+    以及配置打印系统其他组成部分。
+  - 与打印设备本身交互的后端
+  - 一种能让假脱机程序通信并传输打印作业的网络协议
+- CUPS 打印
+  - CUPS 服务端也是web服务器
+  - CUPS客户端可以是 web，也可以是命令行
+  - CUPS 服务端口 631
+  - 命令
+    - lpr foo.pdf 默认打印机打印文件
+- CUPS 打印服务器管理
+- 故障排查
+  - 重启打印守护进程 （cupsd）
+  - 日志文件 CUPS 维护了3种日志文件：页面日志、访问日志、错误日志
+  - 直接打印连接 直接运行打印机后端，测试打印机的物理连接 /usr/lib/cups/backend/usb
+
+## 常见服务
+
+- 文件共享
+  - NFS
+  - Samba
+  - vsftpd
+  - proFTPD
+- 版本控制
+  - SVN
+  - git
+- 网络存储
+  - iSCSI
+- 基础服务
+  - DNS
+  - SSH
+  - NTP
+
+## 配置管理
+
+- 配置管理
+- 配置管理的危险
+- 配置管理要素
+- Ansible
+- Salt
+
+## 集群及高可用
+
+## 虚拟化
+
+- 虚拟化
+- Linux 虚拟化
+- packer
+- vagrant
+
+## 持续集成与交付
+
+- CI/CD基础
+- 流水线
+- Jenkins
+
+## 监控
+
+- 监控概览
+- 监控文化
+- 监控平台
+- 数据收集
+- 网络监控
+- 系统监控
+- 应用监控
+- 安全监控
+- SNMP
+- 监控技巧
+
+## 性能分析
+
+
 
 ## 词汇
 
