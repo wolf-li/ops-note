@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-10-23 17:26:02
+ * @LastEditTime: 2024-10-24 17:20:33
  * @LastEditors: wolf-li
  * @Description:
  * @FilePath: /note/src/Mind/LinuxMind.md
@@ -365,19 +365,52 @@
 ## Linux 文本三剑客
 
 - 正则表达式
-  - 常规正则
-^ 尖角号，用于模式最左侧，匹配以 xx 开头
-$ dollar 符，结尾
-^$ 组合符，表示空格
-.  匹配任意一个字符，不匹配空行
-\\ 转义字符，特殊含义的字符显出原形
-\* 匹配前一个字符，
-.\* 组合匹配所有
-^.\* 组合符，匹配任意多个字符开头内容
-.*$ 匹配任意多个字符结尾的内容
-[abc] 匹配[] 集合内任意字符
-[^abc] 匹配除了 ^后面的字符
-  - 扩展正则
+  - 基本正则
+    - ^ 尖角号，用于模式最左侧，匹配以 xx 开头
+    - $ dollar 符，结尾
+    - ^$ 组合符，表示空格
+    - .  匹配任意一个字符，不匹配空行
+    - \\ 转义字符，特殊含义的字符显出原形
+    - \* 匹配前一个字符，
+    - .\* 组合匹配所有
+    - ^.\* 组合符，匹配任意多个字符开头内容
+    - .*$ 匹配任意多个字符结尾的内容
+    - \{n,m\} 匹配前一个字符，重复 n 到 m 次
+    - \{n,\} 匹配前一个字符，重复至少 n 次
+    - \{n\} 匹配前一个字符，重复 n 次
+    - \(\) 将 () 之间的内容存储在保留空间，最多存储 9 个
+    - [x-z] 匹配连续字符范围
+    - [abc] 匹配[] 集合内任意字符
+    - [^abc] 匹配除了 ^后面的字符
+  - 扩展正则 grep -E 或 egrep
+    - {n,m} 等同于基本正则 {n,m}
+    - \+ 匹配 \+ 前面的字符，出现一次或多次
+    - ? 匹配 ? 前面的字符，出现 0 次或一次
+    - | 匹配逻辑 或
+    - () 匹配正则集合
+  - POSIX 规范
+    - 字符集 含义
+      [:alpha:] 字母字符
+      [:alnum:] 数字字符
+      [:cntrl:] 控制字符
+      [:digit:] 数字字符
+      [:xdigit:] 十六进制数字字符
+      [:punct:] 标点字符
+      [:graph:] 非空格字符
+      [:print:] 任何可以显示的字符
+      [:space:] 任何产生空白的字符
+      [:blank:] 空格与 tab 健字符
+      [:lower:] 小写字符
+      [:upper:] 大写字符
+  - Perl 正则 grep -P
+    - \B 与 \b 为反义词，\Bthe\B 不匹配单词 the, 仅会匹配中间含有 the 的单词
+    - \d 可以匹配数字
+    - \b 边界字符，匹配单词的开始或结尾
+    - \D 匹配所有非数字
+    - \s 匹配所有空白符号（比如空格、Tab缩紧、制表符）
+    - \S 匹配所有非空白符号
+    - \w 可以匹配字母、数字、下划线
+    - \W 可以匹配除字母、数字、下划线以外的符号
 - sed 文本替换
   文本替换 sed 's/book/books/' file
 -n 选项或 -p 命令，打印发生替换的行。 sed -n 's/test/TEST/p' file
@@ -760,6 +793,10 @@ FNR 各文件分别计数的行号
     - 6 重新启动
   - runlevel 显示当前运行级别
 
+## 内存管理
+
+- 系统内核为每个进程定义了地址空间，创建了一种假象；进程拥有一块无限的连续的内存区域。实际上，不同进程的内存页面全部都是胡乱堆放在系统的物理内存中。只有内核的记账（bookkeeping）和内存保护机制才能分清楚它们。
+
 ## 网络管理
 
 - 网卡信息
@@ -893,54 +930,47 @@ FNR 各文件分别计数的行号
           在路由之前更改数据包。更改发生在路由决定之前。
         - POSTROUTING
           路由后更改数据包。更改发生在路由决定之后。
-    	tables 对应的 chains
-    rules 规则
-    	定义匹配数据包的条件，捕获数据包后发送到 targets
-    targets 目标
-    	对数据包采取的动作（接收、丢弃、驳回）
-        ACCEPT
-        	允许数据包通过防火墙
-        DROP
-        	在通知发送者的情况下丢弃数据包
-        REJECT
-        	通知发送者错误下丢弃数据包
-        LOG
-        	记录数据包信息到日志文件中
-        SNAT
-        	源地址转换
-        DNAT
-        	目标地址转换
-        MASQUERADE
-        	为动态分配的IP更改数据包的源地址。
-	安装
-    deb 包管理
-    	apt install iptables
-    	apt install iptables-persistent
-    	systemctl enable netfilter-persistent
-    rpm 包管理
-    	yum install iptables
-    	yum install iptables-services
-    	systemctl enable iptables
-	常用命令
-    查看规则
-iptables -L
-    允许换回地址通信
-iptables -A INPUT -i lo -j ACCEPT
-    允许访问 http 服务
-iptables -A INPUT -p tcp --dport 80 -j ACCEPT
-    允许某个 IP 访问
-iptables -A INPUT -s [IP-address] -j ACCEPT
-    记录
-iptables -A INPUT -j LOG --log-prefix "Dropped: "
-    删除某个规则
-iptables -L --line-numbers
-    移除所有规则
-iptables -F
-    保存配置
-    	deb
-netfilter-persistent save
-    	rpm
-service iptables save
+      - tables 对应的 chains
+        - rules 规则
+          定义匹配数据包的条件，捕获数据包后发送到 targets
+        - targets 目标
+          对数据包采取的动作（接收、丢弃、驳回）
+          - ACCEPT 允许数据包通过防火墙
+          - DROP 在通知发送者的情况下丢弃数据包
+          - REJECT 通知发送者错误下丢弃数据包
+          - LOG 记录数据包信息到日志文件中
+          - SNAT 源地址转换
+          - DNAT 目标地址转换
+          - MASQUERADE 为动态分配的IP更改数据包的源地址。
+      - 安装
+        - deb 包管理
+          apt install iptables
+          apt install iptables-persistent
+          systemctl enable netfilter-persistent
+        - rpm 包管理
+          yum install iptables
+          yum install iptables-services
+         systemctl enable iptables
+      - 常用命令
+        - 查看规则
+        iptables -L
+        - 允许换回地址通信
+        iptables -A INPUT -i lo -j ACCEPT
+        - 允许访问 http 服务
+        iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+        - 允许某个 IP 访问
+        iptables -A INPUT -s [IP-address] -j ACCEPT
+        - 记录
+        iptables -A INPUT -j LOG --log-prefix "Dropped: "
+        - 删除某个规则
+        iptables -L --line-numbers
+        - 移除所有规则
+        iptables -F
+        - 保存配置
+    	    deb
+          netfilter-persistent save
+    	    rpm
+          service iptables save
 	参考链接
     https://phoenixnap.com/kb/iptables-linux
 - selinux （redhat 系列用）
@@ -952,9 +982,9 @@ disable：selinux 禁用，日志也不记录
 - OpenVPN
 - WireGuard
 
-## 日志
+## 日志管理
 
-- 日志管理
+- 日志管理流程
   - 从各种源头收集日志
   - 为消息的查询、分析、过滤、监视提供结构化接口
   - 管理消息的保留和日期，以便消息在发挥作用或合法期间可以尽可能久地保留，遵循相关规范。
@@ -966,15 +996,172 @@ disable：selinux 禁用，日志也不记录
   - /var/log/cloud-init.log cloud-init 初始化脚本
   - /var/log/cron,cron/log  cron的执行情况和出现的错误
   - /var/log/daemon.log 所有的守护进程信息
-  - /var/log/debug* 
-- systemd journal
+  - /var/log/debug* 调试过程输出
+  - /var/log/dmesg 内核消息缓冲区
+  - /var/log/dpkg.log 软件包管理日志
+  - /var/log/faillog 失败的登陆尝试
+  - /var/log/kern.log 所有的内核功能消息
+  - /var/log/lastlog login 每个用户最后一次登陆的时间
+  - /var/log/mail* mail相关 
+  - /var/log/messages 主要的系统日志文件
+  - /var/log/samba* Samba服务相关
+  - /var/log/secure sshd 私有授权消息
+  - /var/log/syslog* 主要的系统日志文件 
+  - /var/log/wtmp 登陆记录
+  - /var/log/xen/* xen 相关日志
+  - /var/log/Xorg.n.log X window 服务错误
+  - /var/log/yum.log 软件包管理日志
+- 日志文件会增长，最好单独挂载，进行日志切割。
+- systemd journal 日志
+  - systemd 包含了一个叫做 systemd-journald 的日志记录守护进程。它复制了 syslog 的大部分功能，但仍能与 syslog 和平共处（取决于如何配置）
+  - 文件格式：二进制
+  - 信息是收集位置
+    - 通过套接字 /dev/log (软连接实际 /run/systemd/journal/dev-log)
+    - 通过设备文件 /dev/kmsg (字符设备) 收集有 linux kernel 产生的日志文件
+    - UNIX 套接字 /run/systemd/stdout 为通过标准输出写入日志消息的软件服务
+    - UNIX 套接字 /run/systemd/socket 为通过 systemd journal API 提交日志消息的软件服务
+    - 内核守护进程 auditd 的审计消息
+  - 有的管理员使用 systemd-journal-remote 实用工具 （systemd-journal-upload system-journal-gateway）将序列化的日志消息通过网络发送到远端的 journal
+  - 配置 systemd journal
+    systemd journal 默认配置文件是 /etc/systemd/journald.conf 该文件并不能直接编辑，需要将定制好的配置放入目录 /etc/systemd/journald.conf.d/ 所有以 .conf 为结尾的文件都会被自动加载，默认的 journal.conf 中包含的所有选项都处于注释状态，而且都已经设置好了默认值，因此你一眼就可以看出哪些选项可以使用。其中包括日志的最大容量、消息的留存期以及各种各种速率限制设置。
+    Storage 选项控制着是否将内存保存到磁盘。
+    - volatile 日志保存在内存中
+    - persistent 将日志保存到 /var/log/journal 如果该目录不存在则自动创建。
+    - auto 将日志保存在 /var/log/journal 但不会自动创建目录（默认选项）
+    - none 丢弃所有的日志数据
+  - 常用命令
+    - 日志查看 journalctl -u ssh
+    - 实施读取日志文件 journalctl -f \<service>
+    - 显示日志所占用的磁盘空间 journalctl --disk-usage
+    - 显示一个带有数字标识符的系统引导顺序表。 journalctl --list-boots
+    - 显示自昨日午夜开始，直到现在的所有信息 journalctl --since=yesterday --until=now
+    - 显示特定程序最近的 100 条日志 journalctl -n 100 /usr/sbin/sshd
 - syslog
+  - 是一套全面的日志记录系统，也是 IETF 标准的日志记录协议。它有两个重要的功能：将程序员从各种写入日志文件的枯燥方法中解脱出来，管理员控制日志记录的权利。在 syslog 出现之前，每个程序都可以拥有自己的日志记录策略。系统管理员无法做到统一控制该保存哪些信息或保存到哪里。syslog 用法灵活。允许管理员按照源（功能）和重要性（安全级别）对消息进行分类并将其引向不同的目的地：日志文件、用户终端，甚至是其他机器。linux 系统中最初是 syslogd 守护进程现已更新为 rsyslogd。rsyslog 扩展了原来的功能同时保持了 API 向后兼容性。
+  - rsyslog 架构
+    - 事件流和处理事件流的引擎
+    - 日志记录文件 /var/log/syslog
+    - 配置文件 /etc/rsyslog.conf
+    - rsyslogd 进程通常从引导时就开始运行。知晓 syslog 的程序日志将会记录日志记录写入特殊文件 /dev/log，这是一个 Unix 套接字。在没有使用 systemd 系统的常用配置中，rsyslogd 直接从该套接字读取信息，查询配置文件。
+  - rsyslog 版本(redhat 7 使用 rsyslogd 7， debin ubuntu 使用rsyslogd 8)
+  - rsyslog 配置
+    - rsyslog 配置文件中的各行按照出现的先后顺序，自上而下的处理。配置文件的顶部是用于配置守护进程自身的全局属性。指定了要载入哪些输入模块、默认的消息格式、文件的所有权和权限，用于维护 rsyslog 状态的工作目录等设置。
+    - 大多数发行版使用遗留指令 $IncludeConfig 以包含来自配置目录中的额外文件（通常是 /etc/rsyslog.d/*.conf）,考虑到顺序的重要性，发行版通过在文件名前放置数字来组织文件。默认 ubuntu 包含如下文件 20-ufw.conf  21-cloudinit.conf
+    - rsyslog 3种配置语法
+      - 原始 syslog 配置文件格式的行。是以内核日志记录守护进程 sysklogd 命名的。其形式简单有效，但存在一些限制。可用于构建简单的过滤器
+      - 遗留的 rsyslog 指令，这些指令均以 $ 开头，其语法源自 rsyslog 的古老版本。
+      - RaiinerScript 脚本语法
+    - 模块：rsyslog 模块拓展了核心处理引擎的能力，所有的输入（源）和输出（目标）都可以通过模块配置，模块甚至可以解析并修改消息。可以自己使用 c 编写模块
+      - 常见输入输出模块
+        imjournal 模块是和 systemd journal 集中在一起的
+        imuxsock 模块从 UNIX 域套接字读取消息。如果 systemd 不存在，该模块为默认
+        imklog 模块知道如何在 linux 和 BSD系统中读取内核消息
+        imfile 模块可以将纯文本文件转换成 syslog 消息格式，在导入不具备原生 syslog 支持的软件产生的日志文件
+        imtcp 和 imudp 模块可以分别在网络上接收 TCP 和 UDP 形式的日志消息。可以利用这两个模块实现网络的集中式日志记录。
+        immark 模块存在，rsyslog 会定期生成时间戳消息。
+        omfile 模块可以将消息写入文件。
+        omfwd 模块可以通过 TCP 或 UDP 连接日志消息转发给远程 syslog 服务器。
+        omkafka 模块是 Apache Kafka 数据流引擎的生产者实现
+        omelasticsearch 模块可以直接向 elasticsearch 集群写入日志
+        ommysql 模块可以将日志写入 mysql
+    - sysklogd 语法
+      - 格式  selector  action，facility.level  action
+      - syslog 设施名称
+        \*  除 mark 的所有设施
+        auth 与安全和授权相关的命令
+        authpriv 敏感/私有的授权信息
+        cron   cron 守护进程
+        daemon 系统守护进程
+        ftp  ftp守护进程（已废弃）
+        kern 内核
+        local0-7 8种本地消息
+        lpr 行式打印机
+        mark 定期产生的时间戳
+        mail sendmail、postfix 以及其他和邮件相关的软件
+      - syslog 严重级别
+        emerg  恐慌（panic）状况，系统不可用
+        alert  紧急状况，应立即采取行动
+        crit 临界状况
+        err  其他错误
+        warning 告警信息
+        notice  应该调查的事项
+        info 信息类消息
+        debug 调试
+- logrotate 跨平台日志管理与轮转
+  - logrotate 包含了一些理针对被管理的日志文件组的规范。出现在日志文件规范之外的选项应用于后续规范。
+  - logrotate.conf 选项
+    compress 压缩日志
+    daily、weekly、monthly 一句特定的调度计划轮替日志文件
+    delaycompress 压缩除当前和最近版本之外的其他所有版本
+    endscript prerotate 或 postrotate 脚本的结束标记符
+    errors emailaddr 将错误提醒发送至指定的 emailaddr
+    missingok 如果日志文件不存在，那么不发出抱怨信息
+    notifempty 如果日志文件不为空，那么不执行轮替操作
+    olddir dir 指定要被放入 dir 中的旧版本日志文件
+    postrotate 引入在日志文件被轮替后的脚本
+    size logsize 如果日志文件 > logsize 则进行轮替
+- 日志记录策略
+  - 制定日志策略需要考虑的内容
+    - 涉及多少系统和应用
+    - 可用的存储基础设施是什么类型
+    - 日志要被留存多长时间
+    - 那种日志类型的事件重要
+  - 大部分应用都需要考虑以下信息
+    - 用户名或用户ID
+    - 事件成功或失败
+    - 网络事件的源地址
+    - 日期和时间（来自权威信息 ntp）
+    - 添加、修改或删除的敏感数据
+    - 事件详情
 
 ## 驱动程序和内核
 
 - 内核相关的日常事务
+  - 内核提供的接口包括
+    - 硬件设备管理与抽象
+    - 进程和线程（以及之间通信）
+    - 内存管理（虚拟内存和内存空间保护）
+    - I/O 设施（文件系统、网络功能、串口等）
+    - 内务管理（housekeeping）功能（启动、关机、定时器、多任务等）
+  - 内核版本（遵循语义化版本管理）
+    - 主版本
+    - 次版本
+    - 补丁号
 - 设备及驱动程序
+  - 设备驱动程序是一个抽象层，负责管理系统与特定类型硬件之间的交互，这使得内核的其余部分无需了解具体的细节。设备所理解的硬件命令和内核定义（及使用）的固定编程接口之间的翻译由驱动完成。驱动程序有助于大部分内核保持独立性。
+  - 购买硬件时要注意厂商是否提供相应操作系统驱动
+  - 设备文件与设备编号
+    - 大多数情况下，设备驱动属于内核的一部分，并非用户进程。通过 /dev 无论是 内核空间还是用户空间都可以访问驱动程序，内核会讲文件操作应设为相应的驱动程序代码调用即可。
+    - 设备文件管理较难：当系统只支持少数类型的设备时，手动维护设备文件还管的过来。随着设备数量的增长，/dev目录下设备文件的数量越来越多，其中有些文件与当前系统还毫不相干
+    - 现代操作系统都会自动管理设备文件。也可以手动管理 mknod 创建设备文件 mknod filename[要创建的设备文件] type[设备文件类型块还是字符] major[主设备号] minor[次设备号]
+    - 现代设备文件管理
+      - Linux 和 FreeBSD 都实现了设备文件的自动管理。如果检测到新的设备，那么两个系统都会自动创建相应的设备文件。当设备消失时（例如拔掉 U盘），其设备文件也会被删除。由于架构方面的原因，Linux 和 FreeBSD 在创建设备文件的方法各不相同。FreeBSD 中，内核使用一种可以挂载到 /dev 的专用文件系统（devfs）来创建设备。在 Linux 中有一个运行在用户空间的守护进程 udev 负责此项工作。两种系统侦听内核产生的底层事件流，了解设备的出现及消失。
+      - 自动化设备管理概要
+      组成部分             Linux                FreeBSD
+      /dev 文件系统        udev/devtmpfs        devfs
+      /dev文件系统配置文件  -                    /etc/devfs.conf /etc/devfs.rules
+      设备管理程序守护进程   udevd                devd
+      守护进程配置文件      /etc/udev/udev.conf  /etc/devd.conf
+      文件系统自动挂载      udevd                devd
+  - Linux 设备管理
+    - sysfs 技术：Linux 2.6 引入的，由内核实现的一个虚拟的文件系统，提供系统中可用设备及其配置文件和状态的详细信息，内核空间和用户空间都可以访问。sysfs 通常挂载到 /sys 目录，其中的内容包括设备使用的 IRQ 以及排队等待写入磁盘控制器的数据块数。
+    - /sys 子目录
+      block  有关块设备的信息
+      bus    内核所知的各种总线 PCI-E、SCSI、USB等
+      class  按照设备功能类型组织成的目录
+      dev    按照字符设备和块设备划分的设备信息
+      devices 所有以发现设备的分层次表达模型
+      fireware 特定平台子系统（ACPI）的接口
+      fs     内核所知的部分文件系统
+      kernel 内核的内部信息，例如缓冲区和虚拟内存状态
+      module 内核加载动态模块
+      power 系统电源状态信息
+    - 设备配置信息之前都在 /proc 文件系统中。
+    - udevadm 可以查询设备信息、触发事件、控制 udevd 守护进程、监视 udev 和内核事件。
 - Linux 内核配置
+  - 修改可调整的（动态）内核配置参数
+  - 重新构建内核（编译源代码）
+  - 将新的驱动程序和模块动态加载到现有内核中
 - 可装载内核模块
 - 在云中引导其他内核
 - 内核错误
