@@ -98,3 +98,57 @@ EC2：在云中提供安全、可调整大小的计算容量
 - aws Fragate (serverless for ECS or EKS) 是一个用于容器的无服务器计算引擎。它兼容Amazon ECS和Amazon EKS。
   - 使用AWS Fargate时，您不需要配置或管理服务器。AWS Fargate为您管理服务器基础设施。您可以更专注于创新和开发应用程序，并且只需为运行容器所需的资源付费。
 
+## chapter3 全球基础设施和可靠性
+- 学习内容
+  - 总结 aws 全球基础设施的优势
+  - 描述可用区基本概念
+  - 描述 Amazon CloudFront 和 edge locations 的优势
+  - 比较提供AWS服务的不同方法。
+- AWS 全球基础设施
+  - AWS Regions
+    - 选择 Region 考虑的点
+      - 法律法规
+      - 跟客户的距离
+      - 功能可用性：不同区域提供的服务不尽相同
+      - 价格
+  - Availability Zones（AZ）
+    可用分区是一个区域内的单个数据中心或一组数据中心。可用区彼此相距几十英里。这足够接近可用区之间的低延迟（请求和接收内容之间的时间）。但是，如果灾难发生在区域的一部分，它们之间的距离足够远，可以减少多个可用区受到影响的可能性。
+- edge location （边缘节点）
+  - AWS cloudFront （CDN aws 版）使用它来存储离客户更近的内容缓存副本，以便更快地交付。
+  - Amazon Route 53 （DNS）
+  - AWS outposts 在自己的数据中心运行 aws （私有云）
+- 如何使用 AWS 资源
+  - AWS managment console AWS管理控制台是一个基于web的接口，用于访问和管理AWS服务。您可以快速访问最近使用的服务，并通过名称、关键字或首字母缩略词搜索其他服务。控制台包括向导和自动化工作流，可以简化完成任务的过程。
+  - AWS command line interface（cli）AWS CLI使您能够直接从一个工具中的命令行控制多个AWS服务。AWS CLI支持Windows、macOS和Linux三种操作系统。通过使用AWS CLI，您可以自动执行服务和应用程序通过脚本执行的操作。例如，您可以使用命令启动Amazon EC2实例，将Amazon EC2实例连接到特定的Auto Scaling组，等等。
+  - AWS software developer kits（SDK）访问和管理AWS服务的另一个选择是软件开发工具包（sdk）。sdk使您可以通过为您的编程语言或平台设计的API更轻松地使用AWS服务。sdk使您能够将AWS服务与现有应用程序一起使用，或创建将在AWS上运行的全新应用程序。为了帮助您开始使用sdk， AWS为每种受支持的编程语言提供了文档和示例代码。支持的编程语言包括c++、Java、。net等。
+  - AWS Elastic Beanstalk 您提供代码和配置设置，然后Elastic Beanstalk部署执行以下任务所需的资源：
+    - 调整能力
+    - 负载平衡
+    - 自动缩放
+    - 应用程序运行状况监视
+  - AWS CloudFormation 使用AWS CloudFormation，您可以将基础设施视为代码。这意味着您可以通过编写几行代码来构建环境，而不是使用AWS Management Console单独提供资源。AWS CloudFormation以安全、可重复的方式提供资源，使您能够频繁地构建基础架构和应用程序，而无需执行手动操作。它决定在管理堆栈时执行正确的操作，并在检测到错误时自动回滚更改。
+
+## chapter4 网络
+- 学习内容
+  - 描述网络基本概念
+  - 描述共有网络和私有网络的区别
+  - 用现实生活场景解释一个虚拟专用网关。
+  - 使用现实生活场景解释虚拟专用网（VPN）。
+  - 描述 AWS Direct Connect 的优势
+  - 描述混合部署的好处
+  - 描述IT策略中使用的安全层
+  - 描述客户用于与AWS全球网络交互的服务。
+- 连接 AWS
+  - Amazon Virtual Private Cloud (Amazon VPC) 可以用来围绕AWS资源建立边界的网络服务是Amazon Virtual Private Cloud (Amazon VPC)“Amazon VPC”提供AWS云的隔离部分。在这个独立的部分中，您可以在您定义的虚拟网络中启动资源。在VPC中，您可以将资源划分为不同的子网。子网是VPC的一部分，可以包含Amazon EC2实例等资源。
+  - Internet gateway 因特网网关 当公网流量需要访问VPC时，需要为VPC添加外网网关。互联网网关是VPC和互联网之间的连接。你可以想到一个互联网网关,就像客户使用进入咖啡店的门口一样。如果没有互联网网关,没有人可以访问您的VPC中的资源。
+  - Virtual private gateway 虚拟专用网关: 当需要访问VPC中的私有资源时，可以使用虚拟私有网关。虚拟的私有网关使您能够在您的VPC和一个私有网络之间建立一个虚拟的私有网络(VPN)连接,例如一个实时的数据中心或内部的企业网络。一个虚拟的私人网关,只有当它来自一个被批准的网络时,才允许使用VPC。
+  - AWS Direct Connect 是一种服务，可以让您在数据中心和VPC之间建立专用私有连接。AWS Direct Connect提供的专用连接可帮助您降低网络成本并增加可以通过网络传输的带宽量。
+- 子网和网络权限控制列表（ACL）
+  - 子网（subnets）
+  - VPC内网络流量
+  - 网络 ACLs
+  - 无状态包过滤
+  - 安全组（security groups）
+  - 状态包过滤
+  
+
