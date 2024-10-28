@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-10-24 17:20:33
+ * @LastEditTime: 2024-10-26 20:47:05
  * @LastEditors: wolf-li
  * @Description:
  * @FilePath: /note/src/Mind/LinuxMind.md
@@ -650,7 +650,6 @@ FNR 各文件分别计数的行号
       - 删除物理卷 pvremove /dev/sdc{2,3}
 
 ## 备份
-
 
 
 ## 进程管理
