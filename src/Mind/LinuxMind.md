@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-10-26 20:47:05
+ * @LastEditTime: 2024-11-01 17:14:00
  * @LastEditors: wolf-li
  * @Description:
  * @FilePath: /note/src/Mind/LinuxMind.md
@@ -354,12 +354,15 @@
   - 一次性定时任务 at
     命令 at 从文件或标准输入中读取命令并在将来的一个时间执行，只执行一次。at 在正常执行时需要 atd 守护进程
 - anacron
-    如果 linux 服务器在关机时间之内有系统定时任务（cron）需要执行，那么这些     任务是不会执行的，anacron 工具会使用一天，七天，一个月作为检测周期来判断    有定时任务在关机之后没有执行，anacron 工具会在特定的时间内重新执行这些任  centos6 中 anacron工具不再是单独的服务，而变成了系统命令。
-    anacron 文件 /var/spool/anacron/目录存在 /etc/cron.{dailyweekly      monthly} 保存 anacron 工具上次执行的时间，
+    如果 linux 服务器在关机时间之内有系统定时任务（cron）需要执行，那么这些任务是不会执行的，anacron 工具会使用一天，七天，一个月作为检测周期来判断有定时任务在关机之后没有执行，anacron 工具会在特定的时间内重新执行这些任  centos6 中 anacron工具不再是单独的服务，而变成了系统命令。
+    anacron 是一个程序不是一个服务，当操作系统进入 crontab 的任务列表同时 anacorn 会每小时被主动执行一次。
+    anacron 文件 /var/spool/anacron/目录存在 /etc/cron.{dailyweeklymonthly} 保存 anacron 工具上次执行的时间，
     配置文件 /etc/anacrontab 文件
     配置文件 /etc/anacrontab
 天数。 强制延迟（分）。 工作名称。  实际执行命令
 1   5   cron.daily.    nice run-parts /etc/cron.daily
+  - 命令语法
+    - anacron -u [job]
 - systemd.timer
 
 ## Linux 文本三剑客
@@ -546,10 +549,29 @@ FNR 各文件分别计数的行号
 ## 磁盘管理
 
 - 磁盘介绍
-  - 机械硬盘物理特性；
-盘片（Platters）：盘片是机械硬盘的核心部件
-扇区：最小的存储单位，主要有 512bytes 和 4k两种模式
-
+  - 机械硬盘物物理组成（圆形碟片、机械手臂、磁头、主轴马达）
+    - 数据读取过程：主轴马达让碟片转动，然后机械手臂可伸展让磁头在碟片上进行读写操作
+    - 碟片上的数据存放概念
+      - 盘⽚在设计时就是在 盘⽚的同⼼圆上，切出⼀个个的⼩区块，这些⼩区块整合 成⼀个圆环，让机器⼿臂上的磁头去存取。
+      - 扇区：小区块就是扇区（磁盘最小的数据存储单位 512B ，硬盘容量增大最近都为 4KB）
+      - 磁道：同一个同心圆内的扇区组合成的圆就是磁道
+      - 柱面：所有碟片上面的同一个磁道可以组合成一个柱面
+    - 机械硬盘传输接口
+      - SATA接口：SATA是Serial ATA的缩写，即串⾏ATA。它是⼀种电脑总线，主要功能是 ⽤作主板和⼤量存储设备(如硬盘及光盘驱动器)之间的数据传输之⽤。
+        - SATA信息 （传统物理硬盘传输极限速度在 150～200MB/s 之间）
+        版本      带宽（Gbit/s）   速度（MB/s）
+        SATA1.0  1.5             150
+        SATA2.0  3               300
+        SATA3.0  6               600
+      - SAS接口：SAS(Serial Attached SCSI)即串⾏连接SCSI，是新⼀代的SCSI技术，和 现在流⾏的Serial ATA(SATA)硬盘相同，都是采⽤串⾏技术以获得更⾼的 传输速度，并通过缩短连结线改善内部空间等。
+        - SAS是 并⾏SCSI接⼝之后 开发出的全新接⼝
+        - 此接⼝的设计是为了 改善存储系统的效能、可⽤性和扩充性 ，并且提供与SATA硬盘的兼容性。
+        - SAS 信息
+          版本    带宽（Gbit/s）   速度（MB/s）
+          SAS1    3              300
+          SAS2    6              600
+          SAS3    12             1200
+      - SAS和SATA磁盘在价格上差别很⼤，SATA磁盘价格低廉，SAS有着更⾼ 的存储附加属性，很多企业在数据中⼼还是使⽤的SAS磁盘，并且企业级 磁盘阵列卡的连接插槽也是由SAS接⼝开发的
 - 硬盘识别（linux 根据设备类型完成识别）
   - IDE 存储设备在计算机中被识别为 hda ，hdb...
   - SATA、USB或 SCSI 设备会被识别为 sda, sdb ...
@@ -558,7 +580,35 @@ FNR 各文件分别计数的行号
 - 分区(根据功能进行划分方便管理)
   - 硬盘分区方式
     - MBR（msdos 最多可以分4个主分区，单个分区容量有限，无法创建容量大于 2TB 的分区）
+      - MBR组成(数据大小512B)
+        - 主引导记录（MBR）：位于MBR(0-446)B，负责启动操作系统的加载，当计算机启动时，BIOS会读取MBR中的引导程序，并将控制权传递给它，常见的引导程序（GRUB Linux， NTLDR windows）
+        - 分区表（partition table）：记录整块硬盘分区信息，(447-510)64B
+          - 分区表包含四个分区记录每个记录 16字节，用于描述硬盘上的分区信息
+          - 每个分区记录包含以下信息
+            - 分区状态：活动/非活动
+            - 分区起始磁头、磁道、扇区
+            - 分区类型：FAT32、NTFS、EXT4等
+            - 分区结束磁头、磁道、扇区
+            - 分区起始逻辑块地址（LBA）
+            - 分区大小
+        - 魔法数字（Magic Number）
+          - 位于MBR的最后两个字节，值为 0xAA55
+          - BIOS通过检查这个魔术数字来验证 MBR 的有效性
+        - MBR 信息查看（Linux）
+          - sudo fdisk -l /dev/sdX
+          - sudo dd if=/dev/sdX bs=512 count=1 | hexdump -C
+          - sudo gdisk -l /dev/sdX
+          - sudo dd if=/dev/sdX of=mbr.bin bs=512 count=1
+        - MBR 限制
+          - 分区数量限制：最多只能有四个主分区或者三个主分区加厚收纳柜一个扩展分区
+          - 磁盘大小限制：由于MBR使用 32位来寻址逻辑块，最大支持容量为 2TB实际由于 CHS寻址方式限制，单个分区最大容量为 2TB
+          - 兼容性问题：MBR与BIOS兼容，但不支持 UEFI启动
       - 传统分区方式中，如果需要更多分区，可以在扩展分区中创建逻辑分区
+        - 磁盘默认的分区表仅能写入四组分区信息
+        - 四组分区信息称为主要（primary）或扩展（Extended）分区
+        - 分区的最小单位通通常为柱面
+        - 当系统要写入磁盘时，一定会参考分区表，才能针对某个分区进行数据的处理
+        - 分区的最小单位通常为柱面
       - 具体操作步骤
         - fdisk -l 查看硬盘分区表（fdisk 是一个交互式命令）
         - fdisk /dev/sda 为 sda 硬盘进行分区
@@ -571,7 +621,16 @@ FNR 各文件分别计数的行号
           - p 查看分区情况
           - w 保存退出
         - partprobe /dev//sda 立即读取分区表，无需重启即可识别新建分区
-    - GPT 不受限制，还能提供分区表的冗余信息以实现分区表的设备与安全使用工具 parted
+    - GPT（GUID partion table）磁盘分区表。相对于 MBR 不受限制，还能提供分区表的冗余信息以实现分区表的设备与安全使用工具 parted、gdisk
+      - GPT结构
+        - 为了兼容所有硬盘，在扇区定义上，大多数会使用逻辑区块地址（logical block address LBA，默认 512B）处理。GPT 使用 34 个 LBA区块来记录分区信息。整个磁盘最后 34 个 LBA也拿来作为另一个备份。
+        - LBA0（兼容 MBR 区块）保护MBR：
+          - 位于硬盘的起始位置，占一个扇区
+          - 包含一个类型为 0xEE 的分区，覆盖整个硬盘，可以防止 MBR 工具错误地格式化 GPT 硬盘
+          - 不用于启动，仅用于向后兼容
+        - LBA1（GPT 表头记录）：包含分区表的位置和大小、磁盘的唯一标识符（GUID）、分区表和校验和
+        - LBA2-33（实际记录分区信息处）：从LBA2开始，每个 LBA 都可以记录4组分区记录，默认可以有 128 组分区记录。
+          - 每个分区表项描述一个分区，包括分区类型GUID、唯一标识符、起始和结束的 LBA 以及属性标志
       - parted [选项] [硬盘 [命令]]
       - 分区操作
         - 修改分区类型 parted /dev/sda mklabel gpt
@@ -581,6 +640,11 @@ FNR 各文件分别计数的行号
         - 创建没有文件系统类型分区 parted /dev/sdc mkpart primary 6G 8G
         - 查看分区信息 parted /dev/sdc print
         - 删除新建分区 parted /dev/sdc rm 4
+  - 为什么要分区
+    - 数据的安全性
+      - 每个分区数据是分开的。你需要将某个分区数据进行整理是，可以移动数据到另一分区备份
+    - 系统的性能考虑（机械硬盘）
+      - 由于分区将数据集中在某个柱面段中，数据集中，将有助于数据读取到速度与性能
 - 格式化
   - 将硬盘格式化为 ext4 类型 mkfs.ext4 /dev/sdc1
   - 交换分区格式化 mkswap /dev/sdc3
@@ -614,7 +678,6 @@ FNR 各文件分别计数的行号
   \* LVM 可以管理多个硬盘（物理卷）上的存储空间
   \* LVM 中的逻辑卷可以跨多个物理卷，文件系统不需要关心物理卷的位置
   \* LVM 的逻辑卷可以动态调整大小，而不需要移动分区的位置
-
   - 基本概念：
     - 物理卷（PV） 通常是一块硬盘
     - 卷组（VG）由多个物理卷组成
@@ -648,9 +711,57 @@ FNR 各文件分别计数的行号
       - 删除逻辑卷 lvremove /dev/test_vg/test_data
       - 删除卷组 vgremove test_vg
       - 删除物理卷 pvremove /dev/sdc{2,3}
+- 硬盘健康状态
+  - 机械硬盘健康状态检测 可以使用 SMART（self-monitioring analysis and Reporting Technology system）服务查看默认支持 SAS、SCSI 接口类型硬盘，检测硬盘需要支持 SMART 协议。
+    - 自我检测 smartctl -t short /dev/sda
+    - 显示磁盘整体信息 smartctl -a /dev/sda
 
-## 备份
+## 备份和恢复
 
+- 备份因素考虑
+  - 备份哪些文件：哪些数据或文件对于用户来说是重要的。
+    - 基本设置信息、服务的内容数据
+    - linux 操作系统需要备份
+      /etc/整个目录
+      /home/ 整个目录
+      /var/spool/mail/
+      /var/spoll/{at,cron}
+      /boot/
+      /root/
+    - 服务数据
+      - WWW服务 /var/www
+      - MariaDB /var/lib/mysql 整个目录
+  - 选择什么备份媒介（考虑点 成本、存储时间）
+    - 磁带（消磁、发霉）
+    - 异地备份系统
+    - CD、DVD、NAS等
+  - 备份的方式
+    - 完整备份（Full backup）
+      - 累计备份
+        - 系统在进行完第一次完整备份后，经过一度时间点运行，比较系统与备份之间的差异，仅备份有差异的文件。而第二次累计备份则与第一次累计备份的数据比较，也是进备份有差异的数据。
+        - 数据恢复：比较麻烦，需要从第一次备份依次还原
+        - 例子
+          完整备份 xfsdump -l 0 -L 'full' -M 'full' -f /backup/dump.home /home
+          第一次累计备份 xfsdump -l 0 -L 'full-1' -M 'full-1' -f /backup/dump.home1 /home
+      - 差异备份
+        - 系统进行第一完整备份后，每次的备份都是与原始的完整备份比较的结果
+        - 可以使用 rsync
+    - 部分备份
+  - 备份的频率
+  - 备份使用的工具
+- 灾难恢复
+  - 备份是方式系统掉数据丢失，如果系统挂掉如何恢复
+  - 硬件问题
+    - 定位损坏硬件，更换相应硬件
+    - 直接将完整的系统恢复即可
+  - 软件问题（发生信息安全事件）
+    - 断网，最好将系统完整备份到其他媒介上，已备未来查验
+    - 开始查看日志文件，尝试找出各种可能的问题
+    - 开始安装新系统（最好找最新的发型版）
+    - 进行系统的升级，与防火墙规则定制
+    - 根据 2 的错误，在安装完新的系统后，修复 BUG
+    - 进行各项服务与相关数据恢复
+    - 测试服务是否正常，服务上线
 
 ## 进程管理
 
@@ -903,10 +1014,26 @@ FNR 各文件分别计数的行号
 
 ## 安全
 
+- 安全要素
+- 基本安全措施
+- 强力安全工具
+- 密码学入门
 - 防火墙
   - firewalld
+    通过将网络划分为不同区域，制定不同区域之间的访问控制策略
+    zero区域       策略
+    drop（丢弃）    任何接收的⽹络数据包都被丢弃，没有任何回复。 仅能有发送出去的⽹络连接。
+    block（限制）   任何接收的⽹络连接都被 IPv4 的 icmp-host-prohibited 信息和 IPv6 的 icmp6-adm-prohibited 信 息所拒绝。
+    public（公共）  在公共区域内使⽤，不能相信⽹络内的其他计算机 不会对您的计算机造成危害，只能接收经过选取的 连接。
+    externel（外部）特别是为路由器启⽤了伪装功能的外部⽹。您不能信任来⾃⽹络的其他计算，不能相信它们不会对您 的计算机造成危害，只能接收经过选择的连接。
+    dmz（非军事区） ⽤于您的⾮军事区内的电脑，此区域内可公开访 问，可以有限地进⼊您的内部⽹络，仅仅接收经过 选择的连接。
+    work（工作区）  ⽤于⼯作区。您可以基本相信⽹络内的其他电脑不 会危害您的电脑。仅仅接收经过选择的连接。
+    home（家庭）    ⽤于家庭⽹络。您可以基本信任⽹络内的其他计算 机不会危害您的计算机。仅仅接收经过选择的连 接。
+    internel（内部）⽤于内部⽹络。同于home
+    trusted（信任） 可接受所有的⽹络连接。
   - iptable
     linux 上应用程序，用于管理 Netfilter 。Netfilter 是 Linux 内核空间的程序代码，在 Linux 内核中实现了防火墙
+    iptables会从上⾄下的读取防⽕墙规则，找到匹配的规则后，就结束匹配 ⼯作，并且执⾏对应的动作。 如果读取所有的防⽕墙规则都没有符合的，就执⾏默认的规则。 规则⼀般两种：允许、拒绝。
     - 使用条件
       sudo 用户权限
       拥有终端
@@ -969,23 +1096,29 @@ FNR 各文件分别计数的行号
         iptables -A INPUT -j LOG --log-prefix "Dropped: "
         - 删除某个规则
         iptables -L --line-numbers
-        - 移除所有规则
+        - 移除所有规则链
         iptables -F
+        - 服务器拒绝 icmp 流量
+        iptable -A INPUT -p icmp --icmp-type 8 -s 0/0 -j REJECT
+        - 禁止访问本机 80 端口
+        iptable -A INPUT -p tcp --drop 80 -j REJECT
         - 保存配置
-    	    deb
+          deb
           netfilter-persistent save
-    	    rpm
+          rpm
           service iptables save
-	参考链接
-    https://phoenixnap.com/kb/iptables-linux
 - selinux （redhat 系列用）
     工作模式：
 enforce： SElinux 根据安全策略，积极阻止有潜在风险的操作
 permission：仅记录会被阻止的操作，
 disable：selinux 禁用，日志也不记录
 	AppArmor （debin 系列用）
-- OpenVPN
-- WireGuard
+- VPN
+  - OpenVPN
+  - WireGuard
+- 专业认证与标准
+- 安全信息来源
+- 安全问题处理
 
 ## 日志管理
 
@@ -1163,13 +1296,75 @@ disable：selinux 禁用，日志也不记录
       power 系统电源状态信息
     - 设备配置信息之前都在 /proc 文件系统中。
     - udevadm 可以查询设备信息、触发事件、控制 udevd 守护进程、监视 udev 和内核事件。
+      - 常用命令
+        - 首个参数 info、trigger、settle、control、monitor、test
+        - 显示设备的所有 udev 属性 udevadm info -a -n <设备名字>
+      - 配置文件默认规则目录 /lib/udev/rules.d 本地配置目录 /etc/udev/rules.d/ ，修改默认规则，在本地目录创建新的文件就可以忽略或覆盖默认规则文件。配置文件名字格式：nn-description.rules （后缀不能省）配置文件规则采用 match_clause  assign_clause
+      - udevd 使用的匹配键
+        ACTION  匹配事件类型，例如 add 或 remove
+        ATTR{filename}  匹配设备的 sysfs 值
+        DEVPATH   匹配特定的设备路径
+        DRIVER   匹配设备使用的驱动程序
+        ENV{key}  匹配环境变量值
+        KERNEL   匹配设备的内核名称
+        PROGRAM  执行外部命令；如果返回码为 0，则匹配
+        RESULT  匹配上一个 PROGRAM 调用的输出
+        SUBSYSTEM  匹配特定的子系统
+        TEST{omask}  测试文件是否存在
+    - 添加 Linux 驱动设备
+      - linux 系统中，设备驱动程序通常以 3 种形式发布
+        - 针对特定呢呵版本的补丁
+        - 可装载的内核模块
+        - 安装脚本或着可安装驱动程序的软件包
+      - cd kernel_src_dir； patch -p1 < patch_file
 - Linux 内核配置
+  - 内核模块文件存放位置 /lib/modules/`uname -r`/  
   - 修改可调整的（动态）内核配置参数
+    - 通过 /proc/sys 中的特殊文件在运行期间查看和设置内核选项,并不是所有文件都可以修改，可以查看内核源代码树文档
+      - 一些可以调整在内核参数在 /proc/sys 中所对应的文件
+      文件               功能
+      cdrom/autoclose    挂载时自动关闭 CD-ROM
+      cdrom/autoeject    卸载时自动弹出 CD-ROM
+      fs/file-max        设置能够打开的文件最大数量
+      kernel/ctrl-alt-del 按下 control-alt-delete 时重启系统，对于不安全的终端，也许可以增强安全性
+      kernel/panic       如果发生内核恐慌，在重新引导之前需要等待的秒数，如果设置为 0 ，表示不自动重新引导系统
+      kernel/printk_ratelimit    设置内核消息之间最少间隔的秒数
+      kernel/printk_ratelimit_burst  在 printk_ratelimit 到达之前，可以连续发送的消息数量
+      kernel/shmmax      设置共享内存的最大数量
+      net/ip*/conf/default/rp_filter  允许 IP 源路由验证
+      net/ip*/icmp_echo_ignore_all 如果设置为1，则忽略 ICMP ping
+      net/ip*/ip_forward  如果设置为1，则允许 IP 转发
+      net/ip*/ip_local_port_range  设置建立连接时使用本地端口范围
+      net/ip*/tcp_syncookies  抵御 SYN 洪范攻击
+      tcp_fin_timeout   设置等待最后一个 TCP FIN 分组的秒数
+      vm/overcommit_memory  控制内存超频行为，如果物理内存无法满足虚拟内存分配请求，内核该如何应对
+      vm/overcommit_ratio  如果出现超频可以使用多少物理内存
+    - 临时修改 sysctl net.ipv4.ip_forward=0 && sysctl -p
+    - 永久修改可以修改文件 /etc/sysctl.conf
   - 重新构建内核（编译源代码）
-  - 将新的驱动程序和模块动态加载到现有内核中
-- 可装载内核模块
+    - 设置合适的 .conf 文件
+    - 将目录切换到 内核源代码目录顶层
+    - 执行 make config、make gconfig 或 make menuconfig
+    - 执行 make clean
+    - 执行 make
+    - 执行 make modules_install
+    - 执行 make install
+  - 将新的驱动程序和模块动态加载到现有内核中（临时）
+    - modprobe ip_vs 动态加载 ip_vs 模块
+    - lsmod | grep ip_vs  查看模块是否加载成功
+    - modprobe -r ip_vs 动态卸载 ip_vs 模块
+    - modinfo ip_vs 查看模块信息
+  - 将内核模块开机自动加载
+    - 通过 modporobe 命令加载的模块仅在当前有效，计算机重启后并不会被加载，如果需要开机自动加载内核模块，需要将 modprobe 命令吸入 /etc/rc.d/rc.local 文件中 rc.local 文件时开机加载, 也可以通过修改 systemd 配置文件
+    - 在 /etc/modprobe.d/ 目录下添加配置文件 xxx.conf 添加 option xxx
 - 在云中引导其他内核
+  - 云实例的引导不同于传统硬件。大多数云供应商都避开了 GRUB，要么用的是修改过的开源引导程序，要么采用某种完全不会使用引导装载程序的方案。在 AWS 中，你需要从一个以 PV-GRUB 作为引导装载程序的基础 Amazon 镜像开始。
 - 内核错误
+  - 内核崩溃（又叫做内核恐慌）是一件哪怕在正确配置的系统中也会发生的事。可能出现的问题（用户输入错误、硬件故障、内核BUG、设备驱动程序）
+  - 软死锁：如果系统处于内核模式超过数秒，就会发生死锁，这使得用户级任务无分运行，该间隔可以配置，通常为 10s 左右。对于进程而言，这段时间已经长到足以错过多个CPU周期，在软死锁期间，只有内核在运行，但它任能处理中断（例如网络接口和键盘中断）数据依旧能够退出系统
+  - 硬死锁：和软死锁一样，但是复杂的地方在于大多数处理器中断都不会被处理。硬死锁的症状很明显，检测速度相对较快。但即使是配置正确的系统在某些极端情况下（CPU高负载），也会出现软死锁
+  - 恐慌
+  - Linux oops
 
 ## 打印
 
@@ -1204,19 +1399,77 @@ disable：selinux 禁用，日志也不记录
 - 网络存储
   - iSCSI
 - 基础服务
+  - 电子邮件
+    - SMTP
+    - POP3
+    - IMAP
   - DNS
   - SSH
   - NTP
 
 ## 配置管理
 
-- 配置管理
+- 配置管理：在网络上实现操作系统管理自动化。管理员编写规范，描述如何配置服务器，然后由配置管理软件依次实现。
+  - 传统实现方法是编写一系列脚本，辅以脚本失效时的临时补救方案。随着时间推移，以此管理的系统往往会退化成一对混乱的残骸，充斥着无法可靠再现的软件包版本和配置。
+  - 以代码的形式获取所需的状态。在版本系统中跟踪之后的改动和更新，以创建审计线索和参考点。这些代码还可以作为网络的非正式文档。管理员或开发人员可以阅读代码，确定系统配置方式。
+  - 大多数配置系统代码的写法都是声明式，而非过程式。只需要描述你想要达到什么样的状态就行了。配置管理系统会按照自己的逻辑对目标系统作出必要的调整。
+  - CM系统的工作是将一系列配置规范（即操作）应用于各个机器。操作的颗粒度各异，但通常比较粗糙，足以对应到可能出现在系统管理员待办事项列表中的事项。
 - 配置管理的危险
+  - 主流开源的 CM 系统在描述模型时使用的词汇并不相同。不同系统之间缺乏一致性和标准性。不同 CM 使用经验无法直接迁移
+  - 随着站点的增长，用于支持配置管理系统的基础设施也必须有相应增长，CM 升级也是一件不小的工程
+  - 一个站点想要完全实现配置管理，一定程度的运维成熟性和严格性是比不可少的。主机一旦处于 CM 系统控制之下，就绝不能在动手修改，否则就立即退回雪花系统的状态了。
 - 配置管理要素
+  - 操作和参数
+    - 操作：小规模的行为或检查。操作看起来像命令，通常都是 CM 系统本身的实现语言编写的，利用了系统的标准工具和库。
+    - 参数：类似命令的参数（执行不同的细分操作）
+    - 操作和命令的不同
+      - 大多数操作在重复操作后不造成任何问题，幂等性
+      - 操作知道自己何时改变了系统的实际状态
+      - 操作知道何时需要改变系统状态。如果档期配合符合规范，操作退出，不进行任何改动
+      - 操作会将结果报告给 CM 系统。
+      - 操作力求跨平台
+  - 变量
+    - 变量是命名过的纸，会影响到配置如何应用于单个机器。变量通常用于设置参数值并填充配置模版的空白。
+    - 注意点
+      - 变量通常可在配置库的多个不同位置和上下文中定义
+      - 每个定义都有其可见性的作用域。作用域类型因 CM 系统不同而异，有的涵盖单个机器、一组机器、或是特定的一组操作
+      - 在特定的上下文中，可以有多个作用域处于活跃状态。作用域能够嵌套，不过更长久的只是共同有效
+      - 因为多个作用与都能够为相同的变量赋值，必须要有某种形式冲突解决方案。
+  - 事实数据
+    - CM 系统检查每个客户端可以确定可描述的事实数据（fact），例如主机网络接口的 IP 地址，操作系统类型等。
+  - 变更处理程序
+    - 在大多数系统中，只要指定的一组或多组操作报告它已修改了目标系统，处理程序就会运行。处理程序并不知道有关此次改动的具体性质，但由于操作于其他处理程序之间的关联非常具体，所以并不需要其他信息。
+  - 绑定
+    - 通过将特定的操作集合与特定主机或主机组相关联，完善了基本配置模型
+  - 操作集与操作集仓库
+    - 操作集：完成特定功能（例如 安装、配置及运行 Web 服务器）的一系列操作
+    - CM 厂商维护着公共仓库，其中包含由官方支持以及用户自发贡献的操作集。
+  - 环境
+    - 把处于配置管理下的客户端隔离成多个世界（传统分类：开发、测试、生产）
+  - 客户端清单与注册
+    - 托管主机的清单（inventory）可以存在于平面文件或者何时的关系数据库中，在某些情况下，甚至完全可以是动态的。
+  - CM 系统所采用的术语
+    上文中的术语             Ansible       Salt      Puppet                       Chef
+    operation（操作）       task（任务）    state     resource                     resource
+    op type（操作类型）      module        function  resource type/provider       provider
+    op list（操作列表）      tasks         states    class/manifest               recipe
+    parameter（参数）       parameter     parameter  property/attribute          attribute
+    binding（绑定）         playbook      top file   classification/declaration  run list
+    master host（控制主机）  control       master     master                      server
+    client host（客户机）    host          minion     agent、node                 node
+    client group           group         nodegroup  role
+    variable               variable      variable   parameter/variable          attribute
+    fact                   fact          grain      fact                        automatic/attribute
+    notification           notification  requisite  notify                      notifies
+    handler                handler       state      subscribe                   subscribe
+    bundle                 role          formula    module                      cookbook
+    bundle repo            galaxy        github     forge                       supermarket
 - Ansible
 - Salt
 
 ## 集群及高可用
+
+
 
 ## 虚拟化
 
@@ -1234,7 +1487,21 @@ disable：selinux 禁用，日志也不记录
 ## 监控
 
 - 监控概览
+  - 监控：在每个系统上线前都将其添加到监控平台，定期执行成套的检查和调教。主动评估指标和趋势，在问题对用户产生影响或事对数据造成威胁前将起找出。
+  - 监控目的：保证整个 IT 基础设施按照预期运行，并且可以访问且易于处理的形式编制有助于管理和规划的数据。
+  - 监控系统
+    - 从感兴趣的系统或设备中收集原始数据
+    - 监控平台检查数据，决定何时的操作方法，通常是管理员设置的规则实现的
+    - 原始数据有监控系统决定的操作进入后端，完成实际的处理
+  - 监控系统做到
+    - 仪表化
+    - 数据类型
+    - 摄入与处理
+    - 通知
+    - 仪表盘与 UI
 - 监控文化
+  - 如果有人关心或依赖某个系统或服务，那就必须将起纳入监控。这样服务或用户所依赖的环境中的一切都要处于监控中
+  - 如果生产设备、系统或是服务表现出可监控的属性，那么这些属性就应该被监控
 - 监控平台
 - 数据收集
 - 网络监控
@@ -1252,3 +1519,7 @@ disable：selinux 禁用，日志也不记录
 
 - DMI（Desktop Management Interface，桌面管理接口）是一种用于管理和跟踪计算机系统硬件信息的标准规范。
 - 守护进程
+
+
+---
+性能分析 《图解性能分析》

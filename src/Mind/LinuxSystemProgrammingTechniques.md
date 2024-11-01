@@ -2,10 +2,17 @@
 
 ## chapter1. estabilsh development envirement
 
-- 开发OS: Ubuntu 20.04
+- 开发OS: Linux 发行版
 - tools:  git、gcc, make , gdb, valgrind
-  apt install build-essential
-  apt install gdb valgrind
+  - 安装
+  apt install git build-essential gdb valgrind make -y
+  dnf install git 'Development Tools' gdb valgrind make -y
+  - 验证
+  git -v
+  gcc --version
+  make --version
+  gdb --version
+  valgrind --version
 - 字符处理函数 #include <stdlib.h>
   - atoi() 将字符串转换为整数
   - atol() 将字符串转换为长整形
@@ -31,42 +38,60 @@
 
 - linux 执行程序返回值 使用 $? 获取 （0 执行成功， 其他执行失败）
 - test 命令常见使用
+  - 检测一个目录是否存在
+    test -e /; echo $?
 - C 程序退出方法
   - retrun
   - exit()
     一旦 exit() 被调用程序将以指定的值退出。如果在函数中调用了 exit() 该函数将不会返回到 main()
 - 返回码
   - C 语言中 0 代表假（错误），其他任何值都视为真
-	shell 返回码 （退出码）
-	重定向标准输入、标准输出和标准错误
-		stdin 标准输入   <  或  0<  文件描述符 0 /dev/fd/0  /dev/stdio
-stdout 标准输出 1> 或 > 文件描述符 1 /dev/fd/1  /dev/stdout
-stderr 标准错误  2>  文件描述符 2 /dev/fd/2 /dev/stderr
-/dev/null 黑洞（回收站）发送到该文件的所有内容都会消失
-		例子
-wc < test  # wc 从 test 文件读取内容
-ls -l /tt  2> test  # 错误信息写入到 test
-ls -l / > log # 命令输出写入到 log 中
-ls -l / &> log1. # 标准输入和标准输出重定向到 log 文件中
-	使用管道连接程序
-		shell 中的管道，管道连接的程序被称为过滤器
-例子：
-ls -l / | grep lrwx
-	写入标准输入和标准错误
-		printf() 默认输出到标准输出中
-		fprintf() 可以指定输出流
-		dprintf() 可以指定输出流
-需要代代码中声明 宏 _POSIX_C_SOURCE
-		Linux 中的文件描述符号文件流
-
-	从标准输入读取
-		char *fgets (char *str, int n, FILE *stream)  从指定的流 stream 读取一行，并把它存储在 str 所指向的字符串内。
-	管道友好程序
-		 size_t strspn(const char *str1, const char *str2) 检索字符串 str1 中第一个不在字符串 str2 中出现的字符下标。
-	结果重定向到文件
-	读取环境变量
-		C 库函数 char *getenv(const char *name) 搜索 name 所指向的环境字符串，并返回相关的值给字符串。
-		int setenv(const char *name, const char *value, int overwrite);
+- 常见 shell 退出码
+  退出码   含义
+  0       执行成功
+  1       一般性错误
+  2       shell 内建命令使用错误
+  126     命令无法执行
+  127     命令未发现
+  128     无效的退出参数
+  128+n   信号，128+信号
+  130     程序捕捉到一个中断信号（128+2）
+  137     程序捕捉到一个杀死信号（128+9）
+  /usr/include/sysexit.h 文件未尾还列其他退出码
+- 重定向标准输入、标准输出和标准错误
+  - stdin 标准输入   <  或  0<  文件描述符 0 /dev/fd/0  /dev/stdio
+  - stdout 标准输出 1> 或 > 文件描述符 1 /dev/fd/1  /dev/stdout
+  - stderr 标准错误  2>  文件描述符 2 /dev/fd/2 /dev/stderr
+  - /dev/null 黑洞（回收站）发送到该文件的所有内容都会消失
+  - 例子
+    wc < test  # wc 从 test 文件读取内容
+    ls -l /tt  2> test  # 错误信息写入到 test
+    ls -l / > log # 命令输出写入到 log 中
+    ls -l / &> log1. # 标准输入和标准输出重定向到 log 文件中
+- 使用管道连接程序
+  shell 中的管道，管道连接的程序被称为过滤器
+  - 例子：
+  ls -l / | grep lrwx
+- 写入标准输入和标准错误
+  - 文件流：当我们想要写入文件时，在 C 程序中使用标准库打开的对象。
+  - linux 中一切都是文件或进程，当一个程序在 Linux 中运行时，会自动打开三个文件流，stdin 、stdout、stderr
+  - printf() 默认输出到标准输出中
+  - fprintf() 指定文件流打印文本
+  - dprintf() 指定文件描述符以打印输出信息 （需要使用 #define _POSIX_C_SOURCE 200809L）
+  - Linux 中文件描述符和文件流
+    名称     文件描述符号    文件流（stdio.h）    文件描述符（unistd.h）
+    标准输入  0             stdin              STDIN_FILENO
+    标准输出  1             stdout             STDOUT_FILENO
+    标准错误  2             stderr             STDERR_FILENO
+- 从标准输入读取
+  char *fgets (char \*str, int n, FILE \*stream)  从指定的流 stream 读取一行，并把它存储在 str 所指向的字符串内。
+- 管道友好程序
+  size_t strspn(const char *str1, const char \*str2) 检索字符串 str1 中第一个不在字符串 str2 中出现的字符下标。
+- 结果重定向到文件
+  (cat test.txt | awk '{print $3}' > | ./mph-to-kph-v2 -c) 2> error.txt 1> output.txt
+- 读取环境变量
+  C 库函数 char *getenv(const char \*name) 搜索 name 所指向的环境字符串，并返回相关的值给字符串。
+  int setenv(const char \*name, const char \*value, int overwrite);
 
 ## chapter 3 linux c
 
