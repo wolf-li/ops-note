@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-11-02 16:04:06
+ * @LastEditTime: 2024-11-10 17:08:04
  * @LastEditors: wolf-li
  * @Description:
  * @FilePath: /note/src/Mind/LinuxMind.md
@@ -891,7 +891,7 @@ FNR 各文件分别计数的行号
          PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
          进程id  用户   优先级 nice 虚拟内存  进程使用未被  共享内存 进程状态 cpu使用率 内存使用率  启动时间 执行命令
          nice 不是 priority 但是可以影响优先级（范围 -20-19），nice值越低，说明进程越不nice，抢占cpu的能力就越强，优先级就越高。静态优先级
-  - 进程优先级调整 renice 
+  - 进程优先级调整 renice
     - 基本语法： renice priority [-p] pid
     - 改变一个进程优先级 renice 10 -p 124
     - 改变一个进程组 renice -n 10  -g 4
@@ -1058,13 +1058,13 @@ FNR 各文件分别计数的行号
     - [a-zA-Z0-9]：所有小写字母、大写字母与数字。
     - [abc]*：所有以a、b、c字符之一开头的文件名。
     - program.[co]：文件program.c与文件program.o。
-    - BACKUP.[0-9][0-9][0-9]：所有以BACKUP.开头，后面是三个数字的文件名。
+    - BACKUP.\[0-9]\[0-9][0-9]：所有以BACKUP.开头，后面是三个数字的文件名。
   - 大括号扩展: 大括号扩展{...}表示分别扩展成大括号里面的所有值，各个值之间使用逗号分隔。比如，{1,2,3}扩展成1 2 3。
   - {start..end} 扩展: 大括号扩展有一个简写形式{start..end}，表示扩展成一个连续序列。比如，{a..z}可以扩展成26个小写英文字母。
     - 正序 echo d{a..d}g // dag dbg dcg ddg
     - 逆序 echo {c..a}  // c b a
-  - 变量扩展:将 $ 作为开头的词视为变量 
-    - echo $SHELL / echo ${SHELL} 
+  - 变量扩展:将 $ 作为开头的词视为变量
+    - echo $SHELL / echo ${SHELL}
     - 返回匹配所有给定字符串的变量名 echo ${!s*}
   - 子命令扩展 $(...)可以扩展成另一个命令的运行结果，该命令的所有输出都会作为返回值。
     - echo $(date)
@@ -1093,7 +1093,7 @@ FNR 各文件分别计数的行号
     - Bash 的extglob参数是否打开 shopt extglob
     - 开启某个参数 shopt -s extglob
     - 关闭某个参数 shopt -u extglob
-    - 量词语法 
+    - 量词语法
       ?(pattern-list)：模式匹配零次或一次。
       *(pattern-list)：模式匹配零次或多次。
       +(pattern-list)：模式匹配一次或多次。  ls abc+(.txt) // 例子显示 abc.txt abc.txt.txt
@@ -1200,17 +1200,17 @@ FNR 各文件分别计数的行号
     - ${FOO:0:3} 子串 (位置，长度)
     - ${FOO:(-3):3} 从右边开始的子串, bash 4.2之后才支持负数索引
   - 搜索和替换
-    - 字符串头部模式匹配 
-      \${FOO#word}	从头开始扫描word，将匹配word正则表达的字符过滤掉,#为最短匹配
-      \${FOO##word}	从头开始扫描word，将匹配word正则表达的字符过滤掉,##为最长匹配
+    - 字符串头部模式匹配
+      \${FOO#word} 从头开始扫描word，将匹配word正则表达的字符过滤掉,#为最短匹配
+      \${FOO##word} 从头开始扫描word，将匹配word正则表达的字符过滤掉,##为最长匹配
     - 字符串尾部模式匹配
-      \${FOO%word}	从尾开始扫描word，将匹配word正则表达式的字符过滤掉,%为最短匹配
-      \${FOO%%word}	从尾开始扫描word，将匹配word正则表达式的字符过滤掉,%%为最长匹配
+      \${FOO%word} 从尾开始扫描word，将匹配word正则表达式的字符过滤掉,%为最短匹配
+      \${FOO%%word} 从尾开始扫描word，将匹配word正则表达式的字符过滤掉,%%为最长匹配
     - 任意位置匹配
-      \${FOO/pattern/string}	替换第一个匹配项
-      \${FOO//pattern/string}	替换全部匹配项
-      \${FOO/%pattern/string}	替换后缀
-      \${FOO/#pattern/string}	替换前缀
+      \${FOO/pattern/string} 替换第一个匹配项
+      \${FOO//pattern/string} 替换全部匹配项
+      \${FOO/%pattern/string} 替换后缀
+      \${FOO/#pattern/string} 替换前缀
   - 改变大小写
     - 转为大写 ${varname^^}
     - 转为小写 ${varname,,}
@@ -1231,7 +1231,7 @@ FNR 各文件分别计数的行号
     0number：八进制数。
     0xnumber：十六进制数。
     base#number：base进制的数。
-    echo $((0xff)) 
+    echo $((0xff))
   - 位运算
     \$((...))支持以下的二进制位运算符。
     <<：位左移运算，把一个数字的所有位向左移动指定的位。
@@ -1257,7 +1257,7 @@ FNR 各文件分别计数的行号
     parameter = value：简单赋值。
     parameter += value：等价于parameter = parameter + value。
     parameter -= value：等价于parameter = parameter – value。
-    parameter *= value：等价于parameter = parameter * value。
+    parameter *= value：等价于parameter = parameter \* value。
     parameter /= value：等价于parameter = parameter / value。
     parameter \%= value：等价于parameter = parameter \% value。
     parameter <<= value：等价于parameter = parameter << value。
@@ -1280,7 +1280,7 @@ FNR 各文件分别计数的行号
   - 环境变量
     HISTTIMEFORMAT 历史记录格式
     HISTSIZE  设置保存历史操作的数量
-    HISTIGNORE 配置那些命令不记录到历史中 
+    HISTIGNORE 配置那些命令不记录到历史中
   - ctrl + r 搜索历史命令
   - ! + 行号，样式 !8 执行历史命令第几行的命令
   - ！- 行号, 样式 !-3 执行历史命令倒数第几行的命令
