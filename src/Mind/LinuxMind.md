@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 21:34:27
- * @LastEditTime: 2024-11-10 17:08:04
+ * @LastEditTime: 2024-11-12 13:19:19
  * @LastEditors: wolf-li
  * @Description:
  * @FilePath: /note/src/Mind/LinuxMind.md
@@ -527,15 +527,17 @@ FNR 各文件分别计数的行号
   - 更新
     apt-get update
   - 安装
-    apt-get install packagename
+    apt-get install \<packagename>
   - 卸载(保留配置文件)
-    apt-get remove packagename
+    apt-get remove \<packagename>
   - 卸载（删除配置文件）
-    apt-get -purge remove package
+    apt-get -purge remove \<packagename>
   - 缓存清空
     apt-get clean
   - 更新所有安装的软件包
-   apt-get upgrade
+    apt-get upgrade
+  - 搜索某个软件包
+    apt-get search \<packagename>
 - dpkg 管理 .deb 包
   - 查看某个软件是否安装
     dpkg -l \<packagename>
@@ -1832,7 +1834,58 @@ disable：selinux 禁用，日志也不记录
 
 ## 集群及高可用
 
-
+- 集群：单台服务负载有限，容易出现单点故障，通过将几百上千的服务器结合在一起，已满足 7*24 小时提供不间断网络服务。
+  - 硬件负载均衡： F5的 BGP-IP、 Radware的 AppDirector
+  - 软件负载均衡：LVS、Nginx、HAProxy
+- LVS（Linux virtual server）LVS 已经被集成到 Linux 内核中。该项目在 Linux 内核中实现了基于 IP 地址到请求数据负载均衡调度方案，其数据流动情况为，用户从外部访问公司负载均衡服务器，终端用户的 Web 请求发送给 LVS，LVS 根据自己预设的算法将请求发送给后端的某台 Web 服务，比如，轮询算法可以将外部的请求平均分配给后端的所有服务器。
+  - 基于 NAT 的 LVS：网络地址转换，作用是通过数据报头的修改，使位于企业内部的私有 IP 地址主机可以访问外网，以及内部用户可以访问位于公司内部的私有IP地址主机。LVS使用两块网卡配置不同的 IP地址，
+    - 工作原理：用户通过 DNS 服务解析到公司负载均衡设备上面的外网 IP地址，相对于后端真实服务器，LVS的外网 IP 称为 VIP（virtual IP）地址，用户通过 VIP 连接到后端真实服务器，而这一切对用户而言是无感知的。LVS 通过预设的算法选择后端的一台真实服务器，将请求数据包转发给真实服务器，并且在转发前 LVS 会修改目标 IP 地址和 目标端口，目标地址和目标端口将被修改为真实服务器 IP 和端口。真实服务器将响应包发送给 LVS，LVS在得到响应的数据包后将原地址和目标地址修改为 用户IP 和 LVS VIP地址，转发给用户。LVS有 hash表实现。
+    - 瓶颈：后端服务器如果大于 10台， LVS 就会成为整个集群环境的瓶颈。
+  - 基于 TUN 的 LVS：请求数据包往往小于响应数据包。响应数据包带数据。TUN工作思路就是将请求数据包与响应数据包分离，让 LVS 仅处理请求数据包，真实服务器将响应数据包发送给用户。LVS 和真实服务器之间通过 IP隧道（IP tunniing）数据包封装技术，可以将原始数据包缝状并添加新的报头，（新的原地址和端口，目标地址和端口），从而实现一个目标为 LVS VIP地址的数据包封装，通过隧道转发给后端真实服务器。
+  - 基于 DR 的 LVS 直接路由模式：LVS 依然仅承担数据的入站请求以及根据算法选择合适的真实服务器，最终由真实服务器发送响应包给用户。与 TUN 模式不同的是 DR 模式要求 真实服务器和 LVS 必须在同一个局域网内，VIP地址需要在 LVs 与后端所有服务器间共享，因为最终的真实服务器给客户返回响应包时需要设置源IP地址为 VIP地址，目标IP地址为客户端IP地址，这样客户端访问的是 LVS 的 VIP地址地址，返回的原地址也是 VIP地址。所有的真实服务器都要在 Non-ARP 的网络设备上，也就是该网络设备不会向外广播自己的 MAC地址以及对应的 IP地址，真实服务器的 VIP地址对外部是不可见的，但真实服务器却可以接收目标地址为 VIP地址的网络请求，并在响应数据包时将原地址设置为该 VIP地址。LVS 根据算法在选出真实服务器后，在不修改数据包文的情况下将数据帧的 MAC地址修改为选出的服务器的 MAC地址，通过交换机将数据帧转发给真实服务器。整个过程中真实服务器 VIP地址不需要对外界可见。
+  - LVS 负载均衡调度算法
+    - 轮询算法 RR 依次将请求调度到不同的服务器上，该算法最大的特点就是简单，LVS 会讲请求平均分配给每一个真实服务器
+    - 加权轮询算法 WRR 主要对轮询算法的一次优化和补充，LVS会考虑每台服务器的性能，并给每台服务器添加一个权值，权值越高的服务器处理请求越多。
+    - 最少连接算法 （Least Connections LC）算法将把请求调度到连接数量最少的服务器上
+    - 加权最少连接算法 （Weighted Least Connections WLC）则是给每个服务器一个权值，LVS会尽可能保持服务器连接数量与权值之间的平衡
+    - 基于局部性的最少连接算法（Locality-Based Least Connections LBLC）算法是请求数据包的目标 IP 地址的一种调度算法，该算法优先根据请求的目标 IP 地址寻找最接近该目标 IP 地址所使用的服务器，如果该服务器有能力处理请求，则 LVS 会尽量选择相同的服务器，否则会选择其他可行的服务器。
+    - 带复制的基于局部性的最少连接算法（LBLCR）算法记录的不是一个目标 IP 地址与一台服务器之间的连接记录，它会维护一个目标 IP地址到一组服务器之间的映射关系，防止单个服务器负载过高。
+    - 目标地址散列算法（DH）算法根据目标 IP地址通过 Hash 函数将目标 IP地址与服务器建立映射关系，在服务器不可用或负载过高的情况下，发往该目标 IP地址的请求会固定发给该服务器。
+    - 原地址散列算法（SH）算法与目标地址散列算法类似，它根据源地址散列算法静态分配固定的服务器资源
+  - 部署 LVS
+    - LVS 环境分为 内核层与用户层，内核层负责核心算法实现，用户层需要安装 ipvsadm 工具，通过命令将管理员需要的工作模式与实现算法传递给内核实现。LVS 内核模块为 ip_vs
+    - 检查当前内核是否支持 LVS
+      - 检查 linux 内核是否加载 LVS lsmod ｜ grep ip_vs
+      - 检查当前系统是否有 LVS 模块 find /lib/modules/$(uname -r)/kernel -name ip_vs* | modinfo ip_vs 查看模块信息
+      - linux 内核添加 LVS modprobe ip_vs
+    - ipvsadm
+      - 安装 yum install ipvsadm -y
+      - 用法
+        ipvsadm 选项 服务器地址 -s 算法
+        ipvsadm 选项 服务器地址 -r 真实服务器地址 \[工作模式][权值]
+      - 例子：添加一个虚拟服务，设置调度算法为 轮询算法，所有使用 TCP 访问 1.1.1.1 的 80 端口请求，最终 LVS 通过 NAT 模式转发给 192.168.1.1\192.168.1.2/192.168.1.3 这三台主机的 80 端口
+        ipvsadm -A -t 1.1.1.1:80 -s rr
+        ipvsadm -a -t 1.1.1.1:80 -r 192.168.1.1:80 -m
+        ipvsadm -a -t 1.1.1.1:80 -r 192.168.1.2:80 -m
+        ipvsadm -a -t 1.1.1.1:80 -r 192.168.1.3:80 -m
+      - 常用命令
+        查看 Linux 中的虚拟服务规则表 ipvsadm -Ln
+        查看当前 IPVS 调度状态 ipvsadm -Lnc
+        删除某条规则 ipvsadm -d -t 1.1.1.1:80 -r 192.168.1.1:80
+        备份至文件 ipvsadm -Sn > /tmp/ip_vs.bak
+        清空规则表 ipvsadm -C
+        从文件还原 ipvsadm -R < /tmp/ip_vs.bak
+        修改某个规则算法为加权轮询算法 ipvsadm -E -t -t 1.1.1.1:80 -s wrr
+- Keepalive
+  使用 C 编写的路由热备软件，目标是为 Linux 系统提供简单高效的负载均衡及高可用方案。负载均衡通过 IPVS 内核模块解决，keepalived 由一组检查根据服务器的健康状态动态维护和管理服务器池。Keepalive 通过 VRRP（virtual router redundancy protocl）实现高可用架构，VRRP 是实现路由灾备的基础。
+  - VRRP 是为了在静态路由环境下防止淡点故障而设计的主从灾备协议，VRRP实现在主设备部发生故障时将业务自动切换至从设备，而这一切用户是无感知透明的。VRRP 将两台或多台路由设备虚拟成一个设备，对外仅提供一个虚拟的路由 IP 地址，而多台路由设备同一时刻仅有一台设备拥有该 VIP地址，该设备就是主设备，当备用设备接收不到主设备的状态信息时，备用设备将根据自身的优先级立即选举出新的主设备，并提供所有业务功能。VRRP需要为每个路由设备定义虚拟路由ID（VRID）及设备优先级别，所有主备设备的 VRID 必须相同，所有 VRID 相同的路由设备组成一个虚拟路由设备组，组内优先级高的路由设备将被选举为主设备。虚拟路由设备ID 在优先级均为 0-255之间的整数，如果优先级相等，则继续比较路由设备的实际 IP 地址，IP地址越大，优先级越高。
+  - 配置文件参数
+    配置项                      功能描述
+    notification_email         定义邮件列表，当主服务器出现故障进行主从切换时会发送邮件给邮件列表的所有人
+    notification_email_from    定义邮件发送者
+    smtp_server                smtp 服务器IP地址
+    router_id                  设备标识，一般可以设置为主机名
+    enable_traps               使用 snmp 
 
 ## 虚拟化
 

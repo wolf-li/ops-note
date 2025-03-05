@@ -1,7 +1,7 @@
 <!--
  * @Author: wolf-li
  * @Date: 2024-10-20 09:31:06
- * @LastEditTime: 2024-10-22 20:21:13
+ * @LastEditTime: 2025-02-16 10:21:34
  * @LastEditors: wolf-li
  * @Description: 
  * @FilePath: /note/src/SUMMARY.md
@@ -21,6 +21,10 @@
 ---
 
 # Web服务
+
+- [HTTP协议]
+  - [HTTP协议报文结构](HTTP/HTTP协议报文结构.md)
+  - [HTTP协议请求方法和状态码](HTTP/HTTP协议请求方法和状态码.md)
 
 - [Nginx]()
   - [nginx+上传模块](Web/Nginx/nginx+上传模块.md)
@@ -169,6 +173,9 @@
 - [SQL]()
   - [ISOSQL2003](SQL/SQL/ISOSQL2003.md)
   - [soar](SQL/SQL/soar.md)
+
+# 测试
+- [自动化测试]
 
 # 思维导图
 - [Linux](./Mind/LinuxMind.html)
