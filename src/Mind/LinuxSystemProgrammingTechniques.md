@@ -84,7 +84,7 @@
     标准输出  1             stdout             STDOUT_FILENO
     标准错误  2             stderr             STDERR_FILENO
 - 从标准输入读取
-  char *fgets (char \*str, int n, FILE \*stream)  从指定的流 stream 读取一行，并把它存储在 str 所指向的字符串内。
+  char \*fgets (char \*str, int n, FILE \*stream)  从指定的流 stream 读取一行，并把它存储在 str 所指向的字符串内。
 - 管道友好程序
   size_t strspn(const char *str1, const char \*str2) 检索字符串 str1 中第一个不在字符串 str2 中出现的字符下标。
 - 结果重定向到文件
@@ -159,101 +159,122 @@
 ## chapter 4 error handling
 
 - errno
+  在 Linux 和其他类 Unix 系统中，大多数系统调用函数在发生错误时会设置 errno 的特殊变量。通过这种方式通过返回值（通常是 -1）得到一个通用的错误代码通过查看 errno 变量获取错误的具体信息。
   需要使用 errno.h 头文件
   作用：保存特定的错误值
   错误宏有依赖性，需要部分函数支持才可以使用
   错误宏
-	ECASS  没有权限
-	ENOENT 上级目录不存在
-strerror( int errno ) 将 errno 宏转换为可读错误消息减少代码
-perror(str)  将错误直接打印到错误输出 /dev/std2中, 直接使用即可不需要依赖 错误宏
+  ECASS  没有权限
+  ENOENT 路径不存在 (Error No Entry)
+- strerror( int errno ) 将 errno 宏转换为可读错误消息减少代码
+  if (create(filename, 00644) == -1){
+    errornum = errno;
+    fprintf(stderr, "Cant't create file %a\n", filename);
+    fprintf(stderr, "%s\n", strerror(errornum));
+    return 1;
+  }
+- perror(str)  将错误直接打印到错误输出 /dev/std2中, 直接使用即可不需要依赖 错误宏
+- errno 小程序可以打印所有宏及其整数，默认情况下没有安装，安装包名称 moreutils
+  - Debian 和 Ubuntu apt install moreutils
+  - Fedora dnf install moreutils
+  - CentOS 和 RedHat dnf install epel-release && dnf install moreutils
 
 ## chapter 5 IO
 
-	文件系统
-文件名不是实际文件，而是一个指向索引节点的指针。索引节点包含关于实际数据存储位置信息，文件的元数据，例如 文件模式，最后修改的日期、文件所有者。
-查看文件的元数据  stat <filename>
-	读取索引节点信息
-使用 <sys/stat.h> 库 定义 stat 结构体和 stat函数获取 某个文件名的索引节点信息
-	创建软硬链接
-硬链接 文件名, 硬链接就是复制源文件的索引节点信息, 索引节点信息中的 link +1 
-软连接 文件名的快捷方式，与源文件索引节点信息一样
-软连接创建利用系统函数 symlink()
-#include <unistd.h>
-int symlink(const char *target, const char *linkpath);
-硬链接创建利用系统函数 link()
-#include <unistd.h>
-int link(const char *oldpath, const char *newpath);
-	创建文件并更新时间戳
-文件创建函数 creat() linux 可用
- #include <sys/types.h>
- #include <sys/stat.h>
- #include <fcntl.h>
-int creat(const char *pathname, mode_t mode);
-更新文件时间戳利用系统函数 utime()
-#include <sys/types.h>
-#include <utime.h>
-int utime(const char *filename, const struct utimbuf *times);
-	删除文件
-调用系统函数 unlink() 删除文件软硬链接都可以
-#include <unistd.h>
-int unlink(const char *pathname);
-	获得文件访问权限和所有权
-使用系统函数 stat() 获取文件访问权限和所有权 ，getpwuid() 函数通过 uid 获取用户信息，getgigid() 通过 gid 获取组信息 存储在 <pwd.h> <grp.h> 中定义 passwd ， group 的结构体中
-文件类型
-s  14 socket 
-l  12 symbolic link
--  10 regular file
-b  06 block device
-d  04 directory
-c  02 character derive
-p 01 FIFO 进程间通信使用
-	设置访问权限和所有权
-chmod() 系统调用设置访问权限
-#include <sys/stat.h> 
-int chmod(const char *pathname, mode_t mode);
-chown() 系统调用更改文件所有者和组
-#include <unistd.h>
-int chown(const char *pathname, uid_t owner, gid_t group);
-	使用文件描述符读取文件
-open 系统调用返回一个文件描述符
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-int open(const char *pathname, int flags);
-int open(const char *pathname, int flags, mode_t mode);
-write 向文件写入内容
-#include <unistd.h>
-ssize_t write(int fd, const void *buf, size_t count);
-read 使用文件描述符读取文件内容
-#include <unistd.h>
-ssize_t read(int fd, void *buf, size_t count);
-	使用流读写文件
-向流中写入文件
-#include <stdio.h>
-int printf(const char *format, ...);
-int fprintf(FILE *stream, const char *format, ...);
-从流中读取文件内容
+- 文件系统
+  文件名不是实际文件，而是一个指向索引节点的指针。索引节点包含关于实际数据存储位置信息，文件的元数据，例如 文件模式，最后修改的日期、文件所有者。
+- 查看文件的元数据  stat \<filename\>
+- 读取索引节点信息
+  使用 <sys/stat.h> 库 定义 stat 结构体和 stat函数获取 某个文件名的索引节点信息
+  struct stat filestat;
+  if (stat(argv[1], &filestat) == -1 ){
+    fprintf(stderr, "Can't read file %s: \<file\>\n", argv[0]);
+    return errno;
+  }
+  printf("Inode: %lu\n", filestat.st_ino);
+  printf("Size: %zd\n", filestat.st_size);
+  printf("Links: %lu\n", filestat.st_nlink);
+- 创建软硬链接
+  硬链接 文件名, 硬链接就是复制源文件的索引节点信息, 索引节点信息中的 link +1, ln \<source\> \<target\>
+  软连接 文件名的快捷方式，与源文件索引节点信息一样, ln -s \<source\> \<target\>
+  软连接创建利用系统函数 symlink()
+  #include <unistd.h>
+  int symlink(const char *target, const char \*linkpath);
+  硬链接创建利用系统函数 link()
+  #include <unistd.h>
+  int link(const char \*oldpath, const char \*newpath);
+- 创建文件并更新时间戳
+  文件创建函数 creat() linux 可用
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <fcntl.h>
+  int creat(const char *pathname, mode_t mode);
+- 更新文件时间戳利用系统函数 utime()
+  #include <sys/types.h>
+  #include <utime.h>
+  int utime(const char *filename, const struct utimbuf \*times);
+- 删除文件
+  调用系统函数 unlink() 删除文件软硬链接都可以
+  #include <unistd.h>
+  int unlink(const char *pathname);
+- 获得文件访问权限和所有权
+  文件的完整文件模式由 6 个八进制数组成。前 2个 是文件类型，
+  使用系统函数 stat() 获取文件访问权限和所有权 ，getpwuid() 函数通过 uid 获取用户信息，getgigid() 通过 gid 获取组信息 存储在<pwd.h> <grp.h> 中定义 passwd ， group 的结构体中
+  文件类型
+  s  14 socket
+  l  12 symbolic link
+  \-  10 regular file
+  b  06 block device
+  d  04 directory
+  c  02 character derive
+  p  01 FIFO 进程间通信使用
+- 设置访问权限和所有权
+  chmod() 系统调用设置访问权限
+  #include \<sys/stat.h\>
+  int chmod(const char *pathname, mode_t mode);
+  chown() 系统调用更改文件所有者和组
+  #include \<unistd.h\>
+  int chown(const char \*pathname, uid_t owner, gid_t group);
+- 使用文件描述符读取文件
+  open 系统调用返回一个文件描述符
+  #include <sys/types.h>
+  #include <sys/stat.h>
+  #include <fcntl.h>
+  int open(const char \*pathname, int flags);
+  int open(const char \*pathname, int flags, mode_t mode);
+  write 向文件写入内容
+  #include <unistd.h>
+  ssize_t write(int fd, const void \*buf, size_t count);
+  read 使用文件描述符读取文件内容
+  #include <unistd.h>
+  ssize_t read(int fd, void \*buf, size_t count);
+- 使用流读写文件
+  向流中写入文件
+  #include <stdio.h>
+  int printf(const char *format, ...);
+  int fprintf(FILE \*stream, const char \*format, ...);
+  从流中读取文件内容
+- 使用流打开文件
+  #include <stdio.h>
+  FILE *fopen(const char \*pathname, const char \*mode);
+  关闭流
+  #include <stdio.h>
+  int fclose(FILE \*stream);
+- 使用流读写二进制文件
+  #include <stdio.h>
+  size_t fread(void \*ptr, size_t size, size_t nmemb, FILE \*stream);
+  size_t fwrite(const void \*ptr, size_t size, size_t nmemb, FILE \*stream);
+  使用 lseek() 在文件中移动
+  #include <sys/types.h>
+  #include <unistd.h>
+  off_t lseek(int fd, off_t offset, int whence)
+  使用 fseek() 在文件中移动
+  #include <stdio.h>
+  int fseek(FILE \*stream, long offset, int whence);
 
-使用流打开文件
-#include <stdio.h>
-FILE *fopen(const char *pathname, const char *mode);
-关闭流
-#include <stdio.h>
-int fclose(FILE *stream);
-	使用流读写二进制文件
-#include <stdio.h>
-size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
-size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
-	使用 lseek() 在文件中移动
-#include <sys/types.h>
-#include <unistd.h>
-off_t lseek(int fd, off_t offset, int whence)
-	使用 fseek() 在文件中移动
-#include <stdio.h>
-int fseek(FILE *stream, long offset, int whence);
-chapter6 process
-	如何创建进程
+## chapter6 process
+
+- 如何创建进程
 Subtopic 1
 	在 Bash 中使用作业控制
 jobs 查看后台进程
@@ -270,8 +291,8 @@ bg 作业ID  在后台继续运行该进程
 	CONT
 	在进程中使用execl() 替换运行程序
 #include <unistd.h>
-extern char **environ;
-int execl(const char *pathname, const char *arg, .../* (char  *) NULL */);
+extern char \**environ;
+int execl(const char \*pathname, const char \*arg, .../* (char  \*) NULL \*/);
 	创建新进程
 fork() 创建一个子进程
 #include <sys/types.h>
@@ -281,7 +302,7 @@ pid_t fork(void);
 fork() 调用 execl() 
 	使用 system() 启动一个新进程
 #include <stdlib.h>
-int system(const char *command);
+int system(const char \*command);
 system 通过调用 sh 实现命令执行
 	创建僵尸进程
 僵尸进程：先于父进程退出的子进程，并且父进程没有等待子进程的状态。僵尸进程来自于进程没有死亡这个事实。进程已经退出，但在系统进程表中仍有该进程的条目
